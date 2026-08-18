@@ -95,51 +95,23 @@ svg {
 }
 
 .brand-mark {
-  position: relative;
   display: grid;
   width: 48px;
   height: 48px;
   flex: 0 0 48px;
   place-items: center;
   overflow: hidden;
-  color: #2d2a22;
-  background: radial-gradient(circle at 35% 30%, #fff 0 18%, #ded8c9 19% 48%, #9a8d6a 49% 52%, #eae6dc 53% 68%, #706343 69% 74%, #cfc9b9 75%);
+  background: #f1efe7;
   border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 50%;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 }
 
-.brand-mark::before,
-.brand-mark::after {
-  position: absolute;
-  content: "";
-}
-
-.brand-mark::before {
-  bottom: 9px;
-  left: 8px;
-  width: 30px;
-  height: 17px;
-  background: linear-gradient(140deg, transparent 0 28%, #4a4538 29% 48%, transparent 49%), linear-gradient(40deg, transparent 0 39%, #6d624b 40% 58%, transparent 59%);
-}
-
-.brand-mark::after {
-  top: 10px;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  background: var(--accent);
-  border-radius: 50%;
-  transform: translateX(-50%);
-}
-
-.brand-mark span {
-  position: relative;
-  z-index: 2;
-  margin-top: 16px;
-  font-size: 9px;
-  font-weight: 900;
-  letter-spacing: -0.4px;
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
 }
 
 .brand-copy {
@@ -276,10 +248,6 @@ svg {
   width: 35px;
   height: 35px;
   flex-basis: 35px;
-}
-
-.mobile-brand .brand-mark span {
-  font-size: 7px;
 }
 
 .icon-button {
