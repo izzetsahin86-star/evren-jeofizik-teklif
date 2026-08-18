@@ -29,3 +29,5 @@ JavaScript sözdizimi kontrolü:
 ```bash
 npm run check
 ```
+
+Bu komut ana panel, teklifler, teklif formu, teklif çıktısı, müşteriler, katalog ve ayarlar ekranlarının temel oluşturma testlerini çalıştırır.
