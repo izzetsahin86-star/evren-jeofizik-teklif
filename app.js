@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+  const EVREN_LOGO_URL = "/assets/evren-jeofizik-logo-embedded.svg";
   const DEFAULT_DESCRIPTION = `1. TEKLİF GEÇERLİLİK SÜRESİ: Bu teklif belirtilen geçerlilik tarihine kadar geçerlidir.
 
 2. ÖDEME ŞARTLARI: İşin tamamlanmasını müteakip fatura kesilecek olup, fatura tarihinden itibaren 30 gün içinde ödeme yapılacaktır.
@@ -88,7 +89,7 @@
         bank: "",
         iban: "",
         footer: "Evren Jeofizik Hiz. ve Tek. Tic. Ltd. Şti.",
-        logo: "",
+        logo: EVREN_LOGO_URL,
         isDefault: false,
       },
     ],
@@ -242,7 +243,11 @@
   function loadState() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (saved?.quotes && saved?.customers && saved?.services && saved?.companies) return saved;
+      if (saved?.quotes && saved?.customers && saved?.services && saved?.companies) {
+        const evrenCompany = saved.companies.find((company) => company.id === "company-evren" || company.name?.includes("Evren Jeofizik"));
+        if (evrenCompany && !evrenCompany.logo) evrenCompany.logo = EVREN_LOGO_URL;
+        return saved;
+      }
     } catch (error) {
       console.warn("Kayıtlı veri okunamadı", error);
     }
@@ -354,7 +359,7 @@
   }
 
   function brandMark() {
-    return '<div class="brand-mark" aria-hidden="true"><span>EVREN</span></div>';
+    return `<div class="brand-mark" aria-hidden="true"><img src="${EVREN_LOGO_URL}" alt="" /></div>`;
   }
 
   function toast(message, type = "") {
