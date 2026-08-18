@@ -307,6 +307,13 @@
     return new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric", weekday: "long" }).format(date);
   }
 
+  function dateShort(value) {
+    if (!value) return "—";
+    const date = value instanceof Date ? value : new Date(`${value}T12:00:00`);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "long", year: "numeric" }).format(date);
+  }
+
   function quoteTotals(quote) {
     const subtotal = (quote.items || []).reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
     const vat = (quote.items || []).reduce((sum, item) => {
@@ -461,9 +468,9 @@
       <tbody>${quotes.map((quote) => {
         const total = quoteTotals(quote).total;
         return `<tr>
-          <td><strong>${escapeHtml(quote.no)}</strong></td>
+          <td><span class="table-id"><span class="table-id-mark">${icon("file", 14)}</span><strong>${escapeHtml(quote.no)}</strong></span></td>
           <td class="muted-cell">${escapeHtml(quote.date)}</td>
-          <td><span class="truncate-cell" title="${escapeHtml(quote.customer)}">${escapeHtml(quote.customer || "—")}</span></td>
+          <td><span class="table-customer"><span class="table-avatar">${escapeHtml(initials(quote.customer))}</span><span class="truncate-cell" title="${escapeHtml(quote.customer)}">${escapeHtml(quote.customer || "—")}</span></span></td>
           ${compact ? "" : `<td><span class="truncate-cell" title="${escapeHtml(quote.project)}">${escapeHtml(quote.project || "—")}</span></td><td><span class="truncate-cell">${escapeHtml(quote.location || "—")}</span></td>`}
           <td class="amount-cell">${money(total, true)}</td>
           <td><span class="status-pill ${statusClass(quote.status)}">${escapeHtml(quote.status)}</span></td>
@@ -490,27 +497,54 @@
       const date = new Date(`${quote.date}T12:00:00`);
       return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
     }).length;
+    const activeQuotes = state.quotes.filter((quote) => !["Reddedildi", "İptal"].includes(quote.status));
+    const activeValue = activeQuotes.reduce((sum, quote) => sum + quoteTotals(quote).total, 0);
+    const conversion = total ? Math.round((count("Onaylandı") / total) * 100) : 0;
     const actions = `<button class="btn btn-primary" data-action="new-quote">${icon("plus", 17)} Yeni Teklif</button>`;
     const stats = [
-      ["file", "neutral", total, "Toplam Teklif", ""],
-      ["file", "neutral", count("Taslak"), "Taslak Teklif", ""],
-      ["send", "blue", count("Gönderildi"), "Gönderilen Teklif", ""],
-      ["check", "green", count("Onaylandı"), "Onaylanan Teklif", ""],
-      ["reject", "red", count("Reddedildi"), "Reddedilen Teklif", ""],
-      ["trend", "amber", money(approvedTotal), "Toplam Onaylanan Tutar", "money wide"],
-      ["calendar", "purple", monthly, "Bu Ay Oluşturulan", ""],
+      ["file", "neutral", total, "Toplam Teklif", `${monthly} teklif bu ay`],
+      ["file", "amber", count("Taslak"), "Hazırlanan Taslak", "Düzenlenmeyi bekliyor"],
+      ["send", "blue", count("Gönderildi"), "Müşteriye Gönderildi", "Yanıt bekleniyor"],
+      ["check", "green", count("Onaylandı"), "Kazanılan Teklif", `%${conversion} dönüşüm`],
     ];
     return `<main class="page">
-      ${pageHeader("Ana Panel", `Evren Jeofizik · ${dateLong()}`, actions)}
+      ${pageHeader("Teklif Merkezi", `Evren Jeofizik · ${dateLong()}`, actions)}
+      <section class="dashboard-hero">
+        <div class="hero-copy">
+          <span class="eyebrow">JEOFİZİK & JEOLOJİ HİZMETLERİ</span>
+          <h2>Tekliflerinizi güvenle yönetin.</h2>
+          <p>Müşteri taleplerinden fiyatlandırmaya, teklif hazırlığından PDF çıktısına kadar tüm süreç tek ekranda.</p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-action="new-quote">${icon("plus", 16)} Yeni teklif hazırla</button>
+            <a class="btn btn-hero-secondary" href="${routeHref("/quotes")}" data-nav>${icon("file", 15)} Tüm teklifler</a>
+          </div>
+        </div>
+        <div class="hero-summary" aria-label="Aktif teklif portföyü">
+          <div class="hero-summary-top"><span>Aktif teklif portföyü</span><span class="live-dot">Güncel</span></div>
+          <strong>${money(activeValue)}</strong>
+          <div class="hero-summary-grid">
+            <div><span>Açık teklif</span><b>${activeQuotes.length}</b></div>
+            <div><span>Bu ay</span><b>${monthly}</b></div>
+            <div><span>Başarı</span><b>%${conversion}</b></div>
+          </div>
+        </div>
+      </section>
       <section class="stats-grid" aria-label="Teklif istatistikleri">
-        ${stats.map(([iconName, color, value, label, classes]) => `<article class="stat-card ${classes.includes("wide") ? "wide" : ""}">
+        ${stats.map(([iconName, color, value, label, hint]) => `<article class="stat-card">
           <div class="stat-icon ${color}">${icon(iconName, 20)}</div>
-          <p class="stat-value ${classes.includes("money") ? "money" : ""}">${value}</p>
-          <p class="stat-label">${label}</p>
+          <div class="stat-content"><p class="stat-value">${value}</p><p class="stat-label">${label}</p><span class="stat-hint">${hint}</span></div>
         </article>`).join("")}
       </section>
+      <section class="dashboard-finance-grid">
+        <article class="finance-card">
+          <div class="finance-card-icon">${icon("trend", 22)}</div>
+          <div><span>Onaylanan toplam değer</span><strong>${money(approvedTotal)}</strong><small>Kazanılan tekliflerin KDV dahil toplamı</small></div>
+        </article>
+        <article class="mini-insight-card"><span class="mini-insight-icon">${icon("calendar", 19)}</span><div><strong>${monthly}</strong><span>Bu ay oluşturulan</span></div></article>
+        <article class="mini-insight-card"><span class="mini-insight-icon red">${icon("reject", 19)}</span><div><strong>${count("Reddedildi")}</strong><span>Reddedilen teklif</span></div></article>
+      </section>
       <section class="card">
-        <div class="card-header"><h2 class="card-title">Son Teklifler</h2><a href="${routeHref("/quotes")}" data-nav class="link-accent">Tümünü Gör →</a></div>
+        <div class="card-header"><div><span class="card-kicker">SON HAREKETLER</span><h2 class="card-title">Güncel Teklifler</h2></div><a href="${routeHref("/quotes")}" data-nav class="link-accent">Tümünü görüntüle ${icon("chevron", 14)}</a></div>
         ${quoteTable([...state.quotes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), true)}
       </section>
     </main>`;
@@ -811,29 +845,56 @@
   function renderPrintQuote(quote) {
     const company = state.companies.find((item) => item.id === quote.companyId) || state.companies.find((item) => item.isDefault) || {};
     const totals = quoteTotals(quote);
+    const location = quote.location || [quote.neighborhood, quote.district, quote.province].filter(Boolean).join(" / ") || "—";
+    const companyContacts = [company.phone, company.email, company.website].filter(Boolean);
     return `<div class="detail-toolbar no-print">
       <a href="${routeHref("/quotes")}" data-nav class="back-link">${icon("arrowLeft", 16)} Tekliflere Dön</a>
-      <div class="inline-actions"><a href="${routeHref(`/quotes/${quote.id}/edit`)}" data-nav class="btn">${icon("edit", 15)} Düzenle</a><button class="btn btn-primary" data-action="window-print">${icon("print", 15)} PDF / Yazdır</button></div>
+      <div class="detail-status"><span class="status-pill ${statusClass(quote.status)}">${escapeHtml(quote.status)}</span></div>
+      <div class="inline-actions"><a href="${routeHref(`/quotes/${quote.id}/edit`)}" data-nav class="btn">${icon("edit", 15)} Düzenle</a><button class="btn btn-primary" data-action="window-print">${icon("print", 15)} PDF Oluştur / Yazdır</button></div>
     </div>
     <article class="print-sheet">
+      <div class="print-accent-bar"></div>
       <header class="print-header">
-        <div class="print-brand">${companyLogo(company)}<div><h2>${escapeHtml(company.name || "Evren Jeofizik")}</h2><p>${escapeHtml(company.subtitle || "")}</p><p>${escapeHtml(company.address || "")}</p></div></div>
-        <div class="print-meta"><h1>FİYAT TEKLİFİ</h1><p><strong>Teklif No:</strong> ${escapeHtml(quote.no)}</p><p><strong>Tarih:</strong> ${escapeHtml(quote.date)}</p><p><strong>Geçerlilik:</strong> ${escapeHtml(quote.validUntil || "—")}</p><p><span class="status-pill ${statusClass(quote.status)}">${escapeHtml(quote.status)}</span></p></div>
+        <div class="print-brand">${companyLogo(company)}<div><span class="print-brand-kicker">JEOFİZİK · JEOLOJİ</span><h2>${escapeHtml(company.name || "Evren Jeofizik")}</h2><p>${escapeHtml(company.subtitle || "")}</p><p>${escapeHtml(company.address || "")}</p></div></div>
+        <div class="print-document"><span>TEKLİF DOSYASI</span><h1>FİYAT TEKLİFİ</h1><div class="print-quote-number">${escapeHtml(quote.no)}</div></div>
       </header>
-      <section class="print-blocks">
-        <div class="print-block"><h3>Müşteri Bilgileri</h3><p><strong>${escapeHtml(quote.customer || "—")}</strong></p><p>${escapeHtml(quote.contact || "")}</p><p>${escapeHtml(quote.phone || "")}</p><p>${escapeHtml(quote.email || "")}</p></div>
-        <div class="print-block"><h3>Proje / Alan Bilgileri</h3><p><strong>${escapeHtml(quote.project || "—")}</strong></p><p>${escapeHtml(quote.location || [quote.district, quote.province].filter(Boolean).join(" / ") || "")}</p><p>${quote.licenseNo ? `Ruhsat No: ${escapeHtml(quote.licenseNo)}` : ""}</p><p>${quote.licenseOwner ? `Ruhsat Sahibi: ${escapeHtml(quote.licenseOwner)}` : ""}</p></div>
+      <section class="print-intro-grid">
+        <div class="print-party-card">
+          <span class="print-card-label">TEKLİF SUNULAN</span>
+          <h3>${escapeHtml(quote.customer || "—")}</h3>
+          ${quote.contact ? `<p><b>Yetkili</b>${escapeHtml(quote.contact)}</p>` : ""}
+          ${quote.phone ? `<p><b>Telefon</b>${escapeHtml(quote.phone)}</p>` : ""}
+          ${quote.email ? `<p><b>E-posta</b>${escapeHtml(quote.email)}</p>` : ""}
+        </div>
+        <div class="print-project-card">
+          <span class="print-card-label">PROJE / ÇALIŞMA</span>
+          <h3>${escapeHtml(quote.project || "Jeofizik ve jeoloji hizmetleri")}</h3>
+          <p><b>Çalışma alanı</b>${escapeHtml(location)}</p>
+          ${quote.licenseNo ? `<p><b>Ruhsat no</b>${escapeHtml(quote.licenseNo)}</p>` : ""}
+          ${quote.licenseOwner ? `<p><b>Ruhsat sahibi</b>${escapeHtml(quote.licenseOwner)}</p>` : ""}
+        </div>
+        <div class="print-date-card">
+          <div><span>Teklif tarihi</span><strong>${escapeHtml(dateShort(quote.date))}</strong></div>
+          <div><span>Geçerlilik tarihi</span><strong>${escapeHtml(dateShort(quote.validUntil))}</strong></div>
+          <small>Fiyatlar belirtilen geçerlilik tarihine kadar geçerlidir.</small>
+        </div>
       </section>
-      <section class="print-section"><h3>Hizmet ve Fiyatlandırma</h3>
-        <table class="print-table"><thead><tr><th>#</th><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>
-          ${(quote.items.length ? quote.items : [{ name: "Hizmet kalemi girilmemiştir", unit: "—", quantity: 0, price: 0, vat: 0 }]).map((item, index) => `<tr><td>${index + 1}</td><td>${escapeHtml(item.name)}</td><td>${escapeHtml(item.unit)}</td><td>${Number(item.quantity || 0)}</td><td>${money(item.price)}</td><td>%${Number(item.vat || 0)}</td><td>${money(Number(item.quantity || 0) * Number(item.price || 0))}</td></tr>`).join("")}
+      <section class="print-section print-pricing-section">
+        <div class="print-section-heading"><span>01</span><div><h3>Hizmet ve Fiyatlandırma</h3><p>Çalışma kapsamında sunulacak hizmet kalemleri</p></div></div>
+        <table class="print-table"><thead><tr><th>#</th><th>Hizmet Açıklaması</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>
+          ${(quote.items.length ? quote.items : [{ name: "Hizmet kalemi girilmemiştir", unit: "—", quantity: 0, price: 0, vat: 0 }]).map((item, index) => `<tr><td><span class="item-index">${String(index + 1).padStart(2, "0")}</span></td><td><strong>${escapeHtml(item.name)}</strong></td><td>${escapeHtml(item.unit)}</td><td>${Number(item.quantity || 0)}</td><td class="numeric-cell">${money(item.price)}</td><td>%${Number(item.vat || 0)}</td><td class="numeric-cell"><strong>${money(Number(item.quantity || 0) * Number(item.price || 0))}</strong></td></tr>`).join("")}
         </tbody></table>
-        <div class="print-totals"><div class="print-total-row"><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div class="print-total-row"><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="print-total-row grand"><span>Genel Toplam</span><strong>${money(totals.total)}</strong></div></div>
+        <div class="print-totals"><div class="print-total-row"><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div class="print-total-row"><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="print-total-row grand"><span>GENEL TOPLAM</span><strong>${money(totals.total)}</strong></div><small>KDV dahil toplam teklif bedelidir.</small></div>
       </section>
-      ${quote.workflow?.length ? `<section class="print-section"><h3>İş Akışı</h3><table class="print-table"><tbody>${quote.workflow.map((step, index) => `<tr><td style="width:38px"><strong>${index + 1}</strong></td><td>${escapeHtml(step)}</td></tr>`).join("")}</tbody></table></section>` : ""}
-      ${quote.description ? `<section class="print-section"><h3>Açıklama ve Koşullar</h3><div class="print-copy">${escapeHtml(quote.description)}</div></section>` : ""}
-      ${quote.notes ? `<section class="print-section"><h3>Notlar</h3><div class="print-copy">${escapeHtml(quote.notes)}</div></section>` : ""}
-      <footer class="print-footer"><span>${escapeHtml(company.footer || company.name || "Evren Jeofizik")}</span><span>${escapeHtml([company.phone, company.email, company.website].filter(Boolean).join(" · "))}</span></footer>
+      ${quote.workflow?.length ? `<section class="print-section"><div class="print-section-heading"><span>02</span><div><h3>Çalışma Planı</h3><p>Projenin uygulanma ve teslim aşamaları</p></div></div><div class="print-workflow">${quote.workflow.map((step, index) => `<div class="print-workflow-step"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(step)}</strong></div>`).join("")}</div></section>` : ""}
+      ${quote.images?.length ? `<section class="print-section"><div class="print-section-heading"><span>03</span><div><h3>Proje Görselleri</h3><p>Çalışma alanı ve projeye ait ek görseller</p></div></div><div class="print-image-grid">${quote.images.map((imageUrl, index) => `<figure><img src="${imageUrl}" alt="Proje görseli ${index + 1}"/><figcaption>Görsel ${index + 1}</figcaption></figure>`).join("")}</div></section>` : ""}
+      ${quote.description ? `<section class="print-section print-terms"><div class="print-section-heading"><span>${quote.images?.length ? "04" : "03"}</span><div><h3>Teklif Koşulları</h3><p>Geçerlilik, ödeme ve uygulama esasları</p></div></div><div class="print-copy">${escapeHtml(quote.description)}</div></section>` : ""}
+      ${quote.notes ? `<section class="print-section print-note"><span>Ek Not</span><p>${escapeHtml(quote.notes)}</p></section>` : ""}
+      <section class="print-approval">
+        <div><span>TEKLİFİ HAZIRLAYAN</span><strong>${escapeHtml(company.name || "Evren Jeofizik")}</strong><p>Yetkili / Kaşe / İmza</p></div>
+        <div><span>MÜŞTERİ ONAYI</span><strong>${escapeHtml(quote.customer || "Müşteri / Firma")}</strong><p>Ad Soyad / Kaşe / İmza</p></div>
+      </section>
+      <footer class="print-footer"><div><strong>${escapeHtml(company.footer || company.name || "Evren Jeofizik")}</strong><span>${escapeHtml(company.address || "")}</span></div>${companyContacts.length ? `<div class="print-contact-list">${companyContacts.map((contact) => `<span>${escapeHtml(contact)}</span>`).join("")}</div>` : ""}</footer>
     </article>`;
   }
 
