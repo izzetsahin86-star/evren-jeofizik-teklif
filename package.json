@@ -1,0 +1,13 @@
+{
+  "name": "evren-jeofizik-teklif",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Evren Jeofizik teklif ve müşteri yönetim uygulaması",
+  "scripts": {
+    "dev": "npx serve .",
+    "check": "node --check app.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
