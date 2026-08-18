@@ -364,13 +364,25 @@
   }
 
   function pathInfo() {
-    const path = window.location.pathname.replace(/\/$/, "") || "/";
+    const route = (window.location.hash || "").startsWith("#/")
+      ? window.location.hash.slice(1)
+      : window.location.pathname;
+    const path = route.replace(/\/$/, "") || "/";
     const quoteMatch = path.match(/^\/quotes\/([^/]+)(?:\/(edit))?$/);
     return { path, quoteMatch };
   }
 
+  function routeHref(path) {
+    return `/#${path}`;
+  }
+
+  function pathFromHref(href) {
+    const hashIndex = href.indexOf("#");
+    return hashIndex >= 0 ? (href.slice(hashIndex + 1) || "/") : href;
+  }
+
   function navigate(path) {
-    history.pushState({}, "", path);
+    history.pushState({}, "", routeHref(path));
     ui.sidebarOpen = false;
     ui.modal = null;
     render();
@@ -393,7 +405,7 @@
     return `
       <div class="app-shell">
         <aside class="sidebar ${ui.sidebarOpen ? "open" : ""}">
-          <a href="/" class="brand" data-nav>
+          <a href="${routeHref("/")}" class="brand" data-nav>
             ${brandMark()}
             <div class="brand-copy">
               <p class="brand-name">EVREN JEOFİZİK</p>
@@ -403,7 +415,7 @@
           <button class="sidebar-primary" data-action="new-quote">${icon("plus", 17)} Yeni Teklif</button>
           <nav class="nav-list" aria-label="Ana menü">
             ${navItems.map(([href, iconName, label]) => `
-              <a href="${href}" data-nav class="nav-link ${navActive(href, currentPath) ? "active" : ""}">
+              <a href="${routeHref(href)}" data-nav class="nav-link ${navActive(href, currentPath) ? "active" : ""}">
                 ${icon(iconName, 17)}<span>${label}</span>${navActive(href, currentPath) ? icon("chevron", 14, "nav-arrow") : ""}
               </a>`).join("")}
           </nav>
@@ -415,7 +427,7 @@
         <div class="main-wrap">
           <header class="mobile-topbar">
             <button class="icon-button" data-action="toggle-sidebar" aria-label="Menüyü aç">${icon("menu", 21)}</button>
-            <a href="/" data-nav class="mobile-brand">${brandMark()}<span>EVREN JEOFİZİK</span></a>
+            <a href="${routeHref("/")}" data-nav class="mobile-brand">${brandMark()}<span>EVREN JEOFİZİK</span></a>
             <button class="icon-button" data-action="new-quote" aria-label="Yeni teklif">${icon("plus", 21)}</button>
           </header>
           ${content}
@@ -451,8 +463,8 @@
           <td class="amount-cell">${money(total, true)}</td>
           <td><span class="status-pill ${statusClass(quote.status)}">${escapeHtml(quote.status)}</span></td>
           <td><div class="row-actions">
-            <a class="icon-button" href="/quotes/${quote.id}" data-nav title="Görüntüle" aria-label="Görüntüle">${icon("eye", 15)}</a>
-            <a class="icon-button" href="/quotes/${quote.id}/edit" data-nav title="Düzenle" aria-label="Düzenle">${icon("edit", 15)}</a>
+            <a class="icon-button" href="${routeHref(`/quotes/${quote.id}`)}" data-nav title="Görüntüle" aria-label="Görüntüle">${icon("eye", 15)}</a>
+            <a class="icon-button" href="${routeHref(`/quotes/${quote.id}/edit`)}" data-nav title="Düzenle" aria-label="Düzenle">${icon("edit", 15)}</a>
             <button class="icon-button" data-action="print-quote" data-id="${quote.id}" title="PDF / Yazdır" aria-label="PDF / Yazdır">${icon("download", 15)}</button>
             <button class="icon-button" data-action="copy-quote" data-id="${quote.id}" title="Kopyala" aria-label="Kopyala">${icon("copy", 15)}</button>
             <button class="icon-button danger" data-action="delete-quote" data-id="${quote.id}" title="Sil" aria-label="Sil">${icon("trash", 15)}</button>
@@ -493,7 +505,7 @@
         </article>`).join("")}
       </section>
       <section class="card">
-        <div class="card-header"><h2 class="card-title">Son Teklifler</h2><a href="/quotes" data-nav class="link-accent">Tümünü Gör →</a></div>
+        <div class="card-header"><h2 class="card-title">Son Teklifler</h2><a href="${routeHref("/quotes")}" data-nav class="link-accent">Tümünü Gör →</a></div>
         ${quoteTable([...state.quotes].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6), true)}
       </section>
     </main>`;
@@ -795,8 +807,8 @@
     const company = state.companies.find((item) => item.id === quote.companyId) || state.companies.find((item) => item.isDefault) || {};
     const totals = quoteTotals(quote);
     return `<div class="detail-toolbar no-print">
-      <a href="/quotes" data-nav class="back-link">${icon("arrowLeft", 16)} Tekliflere Dön</a>
-      <div class="inline-actions"><a href="/quotes/${quote.id}/edit" data-nav class="btn">${icon("edit", 15)} Düzenle</a><button class="btn btn-primary" data-action="window-print">${icon("print", 15)} PDF / Yazdır</button></div>
+      <a href="${routeHref("/quotes")}" data-nav class="back-link">${icon("arrowLeft", 16)} Tekliflere Dön</a>
+      <div class="inline-actions"><a href="${routeHref(`/quotes/${quote.id}/edit`)}" data-nav class="btn">${icon("edit", 15)} Düzenle</a><button class="btn btn-primary" data-action="window-print">${icon("print", 15)} PDF / Yazdır</button></div>
     </div>
     <article class="print-sheet">
       <header class="print-header">
@@ -821,7 +833,7 @@
   }
 
   function renderQuoteDetail(quote) {
-    if (!quote) return `<main class="page"><div class="card empty-state"><div><strong>Teklif bulunamadı.</strong><p><a href="/quotes" data-nav class="link-accent">Teklif listesine dön</a></p></div></div></main>`;
+    if (!quote) return `<main class="page"><div class="card empty-state"><div><strong>Teklif bulunamadı.</strong><p><a href="${routeHref("/quotes")}" data-nav class="link-accent">Teklif listesine dön</a></p></div></div></main>`;
     return `<main class="page">${renderPrintQuote(quote)}</main>`;
   }
 
@@ -1049,7 +1061,7 @@
     const navLink = event.target.closest("a[data-nav]");
     if (navLink) {
       event.preventDefault();
-      navigate(navLink.getAttribute("href"));
+      navigate(pathFromHref(navLink.getAttribute("href")));
       return;
     }
     const actionEl = event.target.closest("[data-action]");
@@ -1218,7 +1230,7 @@
     else if (path === "/customers") content = renderCustomers();
     else if (path === "/catalog") content = renderCatalog();
     else if (path === "/settings") content = renderSettings();
-    else content = `<main class="page"><div class="card empty-state"><div><div class="empty-state-icon">${icon("file", 25)}</div><strong>Sayfa bulunamadı</strong><p><a href="/" data-nav class="link-accent">Ana panele dön</a></p></div></div></main>`;
+    else content = `<main class="page"><div class="card empty-state"><div><div class="empty-state-icon">${icon("file", 25)}</div><strong>Sayfa bulunamadı</strong><p><a href="${routeHref("/")}" data-nav class="link-accent">Ana panele dön</a></p></div></div></main>`;
     app.innerHTML = shell(content, path);
     const titles = { "/": "Ana Panel", "/quotes": "Teklifler", "/customers": "Müşteriler", "/catalog": "Hizmet Kataloğu", "/settings": "Ayarlar", "/quotes/new": "Yeni Teklif" };
     document.title = `${titles[path] || (quoteMatch ? "Teklif" : "Evren Jeofizik")} | Evren Jeofizik Teklif`;
