@@ -5,7 +5,7 @@
   "description": "Evren Jeofizik teklif ve müşteri yönetim uygulaması",
   "scripts": {
     "dev": "npx serve .",
-    "check": "node --check app.js"
+    "check": "node smoke-test.js"
   },
   "engines": {
     "node": ">=20"
