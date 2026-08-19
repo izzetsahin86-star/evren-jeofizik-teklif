@@ -23,6 +23,16 @@
     <link rel="stylesheet" href="/pdf-studio-v2.css" />
     <link rel="stylesheet" href="/professional-suite-v3.css" />
     <link rel="stylesheet" href="/creative-studio-v4.css" />
+    <style>
+      .ps-studio[data-v4="1"]{grid-template-rows:auto auto auto auto auto minmax(0,1fr) auto!important}
+      .ps-studio[data-v4="1"]>.pro-studio-bar{grid-row:1}
+      .ps-studio[data-v4="1"]>.ps-toolbar{grid-row:2}
+      .ps-studio[data-v4="1"]>.v4-createbar{grid-row:3}
+      .ps-studio[data-v4="1"]>.ps-inspector{grid-row:4}
+      .ps-studio[data-v4="1"]>.v4-properties{grid-row:5}
+      .ps-studio[data-v4="1"]>.ps-canvas{grid-row:6;min-height:0}
+      .ps-studio[data-v4="1"]>.pro-measure-strip{grid-row:7}
+    </style>
   </head>
   <body>
     <div id="app"></div>
