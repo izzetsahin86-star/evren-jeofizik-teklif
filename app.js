@@ -127,6 +127,8 @@ let state = loadState();
 let quoteDraft = null;
 let quoteTab = "info";
 let printQuoteId = null;
+let printQuoteData = null;
+let pdfPreviewQuote = null;
 let isAuthenticated = sessionStorage.getItem(AUTH_KEY) === "1";
 
 function loadState() {
@@ -192,6 +194,7 @@ const iconPaths = {
   eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4z"/>',
   download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  printer: '<path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
   copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
   trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/>',
   search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',
@@ -232,6 +235,7 @@ function navigate(url) {
   history.pushState({}, "", url);
   quoteDraft = null;
   quoteTab = "info";
+  pdfPreviewQuote = null;
   render();
   window.scrollTo({ top: 0, behavior: "instant" });
 }
@@ -263,6 +267,7 @@ function shell(pageHtml, active) {
       <div class="mobile-topbar"><button class="mobile-menu-btn" data-action="open-menu" aria-label="Menüyü aç">${icon("menu",21)}</button><span class="mobile-title">Evren Jeofizik</span><button class="mobile-menu-btn" data-link="/quotes/new" aria-label="Yeni teklif">${icon("plus",21)}</button></div>
       <main class="main">${pageHtml}</main>
     </div>
+    ${renderPdfPreview()}
     ${renderPrintSheet()}`;
 }
 
@@ -300,7 +305,7 @@ function quoteActions(quote, compact = false) {
   return `<div class="actions">
     <button class="icon-btn" data-link="/quotes/${quote.id}" ${title("view","Görüntüle")}>${icon("eye",16)}</button>
     <button class="icon-btn" data-link="/quotes/new?edit=${quote.id}" ${title("edit","Düzenle")}>${icon("edit",16)}</button>
-    <button class="icon-btn" data-action="pdf-quote" data-id="${quote.id}" ${title("pdf","PDF Oluştur")}>${icon("download",16)}</button>
+    <button class="icon-btn" data-action="preview-pdf" data-id="${quote.id}" ${title("pdf","PDF Önizle")}>${icon("download",16)}</button>
     <button class="icon-btn" data-action="copy-quote" data-id="${quote.id}" ${title("copy","Kopyala")}>${icon("copy",16)}</button>
     <button class="icon-btn danger" data-action="delete-quote" data-id="${quote.id}" ${title("delete","Sil")}>${icon("trash",16)}</button>
   </div>`;
@@ -383,7 +388,24 @@ function renderQuoteForm(editId) {
   const tabs = [["info","Teklif Bilgileri"],["items","Hizmet Kalemleri"],["notes","Açıklama & Notlar"],["workflow","İş Akışı"]];
   const body = quoteTab === "info" ? renderQuoteInfo(q) : quoteTab === "items" ? renderQuoteItems(q) : quoteTab === "notes" ? renderQuoteNotes(q) : renderQuoteWorkflow(q);
   const valid = q.no.trim() && q.customerName.trim();
-  return shell(`<div class="content"><div class="back-row"><button class="back-btn" data-link="/quotes" aria-label="Geri">${icon("arrow",21)}</button><div style="flex:1">${pageHeader(editId ? "Teklifi Düzenle" : "Yeni Teklif", editId ? "Teklif bilgilerini güncelleyin" : "Yeni fiyat teklifi oluşturun")}</div></div><section class="form-card card"><div class="form-tabs">${tabs.map(([key,label]) => `<button class="form-tab ${quoteTab === key ? "active" : ""}" data-action="quote-tab" data-tab="${key}">${label}</button>`).join("")}</div>${body}<div class="form-actions"><button class="primary-btn" data-action="save-quote" data-status="draft" ${valid ? "" : "disabled"}>Taslak Kaydet</button><button class="secondary-btn" data-action="save-quote" data-status="sent" ${valid ? "" : "disabled"}>Kaydet & Gönder</button></div></section></div>`, "quotes");
+  const totals = calcTotals(q.items);
+  return shell(`<div class="content wide quote-compose">
+    <header class="quote-compose-head">
+      <div class="back-row"><button class="back-btn" data-link="/quotes" aria-label="Geri">${icon("arrow",21)}</button><div><p class="quote-eyebrow">TEKLİF YÖNETİMİ</p><h1 class="page-title">${editId ? "Teklifi Düzenle" : "Yeni Teklif Oluştur"}</h1><p class="page-subtitle">Müşteri, hizmet ve proje bilgilerini tek ekrandan yönetin.</p></div></div>
+      <button class="secondary-btn quote-preview-btn" data-action="preview-pdf-draft" ${valid ? "" : "disabled"}>${icon("eye",16)} PDF Önizle</button>
+    </header>
+    <section class="quote-compose-summary" aria-label="Teklif özeti">
+      <div><span>Teklif No</span><strong>${e(q.no || "Henüz girilmedi")}</strong></div>
+      <div><span>Müşteri</span><strong>${e(q.customerName || "Henüz seçilmedi")}</strong></div>
+      <div><span>Hizmet Kalemi</span><strong>${q.items.length}</strong></div>
+      <div class="quote-compose-total"><span>Genel Toplam</span><strong>${money(totals.total).replace("—","0,00 TL")}</strong></div>
+    </section>
+    <section class="form-card card quote-form-card">
+      <div class="form-tabs">${tabs.map(([key,label], index) => `<button class="form-tab ${quoteTab === key ? "active" : ""}" data-action="quote-tab" data-tab="${key}"><span>${index + 1}</span>${label}</button>`).join("")}</div>
+      ${body}
+      <div class="form-actions"><p class="form-action-note"><span></span>${valid ? "Teklif PDF önizlemeye ve kayda hazır." : "Devam etmek için teklif no ve müşteri adını girin."}</p><div class="form-action-buttons"><button class="secondary-btn" data-action="save-quote" data-status="draft" ${valid ? "" : "disabled"}>${icon("save",15)} Taslak Kaydet</button><button class="primary-btn" data-action="save-quote" data-status="sent" ${valid ? "" : "disabled"}>${icon("send",15)} Kaydet & Gönder</button></div></div>
+    </section>
+  </div>`, "quotes");
 }
 
 function renderQuoteInfo(q) {
@@ -407,16 +429,91 @@ function renderQuoteDetail(id) {
   const q = state.quotes.find((quote) => quote.id === id);
   if (!q) return shell(`<div class="content"><div class="card empty-state"><h2>Teklif bulunamadı.</h2><button class="primary-btn" data-link="/quotes">Tekliflere Dön</button></div></div>`, "quotes");
   const totals = calcTotals(q.items);
-  return shell(`<div class="content wide"><div class="detail-top"><div class="back-row"><button class="back-btn" data-link="/quotes" aria-label="Geri">${icon("arrow",21)}</button><div><h1 class="page-title">${e(q.no)}</h1><p class="page-subtitle">${e(q.customerName)} · ${formatDate(q.date)}</p></div></div><div class="detail-actions"><button class="secondary-btn btn-sm" data-link="/quotes/new?edit=${q.id}">${icon("edit",15)} Düzenle</button><button class="primary-btn btn-sm" data-action="pdf-quote" data-id="${q.id}">${icon("download",15)} PDF Oluştur</button></div></div><div class="detail-grid"><section class="detail-section card"><h3>Müşteri ve Proje Bilgileri</h3><div class="detail-list"><div class="detail-field"><span>Müşteri</span><strong>${e(q.customerName)}</strong></div><div class="detail-field"><span>Yetkili</span><strong>${e(q.contact || "—")}</strong></div><div class="detail-field"><span>Telefon</span><strong>${e(q.phone || "—")}</strong></div><div class="detail-field"><span>E-posta</span><strong>${e(q.email || "—")}</strong></div><div class="detail-field"><span>Proje</span><strong>${e(q.projectName || "—")}</strong></div><div class="detail-field"><span>Proje Yeri</span><strong>${e(q.projectPlace || "—")}</strong></div></div></section><section class="detail-section card"><h3>Teklif Özeti</h3><div class="detail-list"><div class="detail-field"><span>Durum</span>${statusPill(q.status)}</div><div class="detail-field"><span>Teklif Tarihi</span><strong>${formatDate(q.date)}</strong></div><div class="detail-field"><span>Geçerlilik</span><strong>${formatDate(q.validUntil)}</strong></div><div class="detail-field"><span>Genel Toplam</span><strong>${money(q.total || totals.total)}</strong></div></div></section><section class="detail-section card detail-lines"><h3>Hizmet Kalemleri</h3><div class="table-wrap"><table><thead><tr><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.length ? q.items.map((item) => `<tr><td>${e(item.name)}</td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price)}</td><td>%${Number(item.vat)}</td><td class="strong">${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") : `<tr><td colspan="6" class="empty-state">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table></div><div class="totals"><div class="total-row"><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div class="total-row"><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="total-row grand"><span>GENEL TOPLAM</span><span>${money(q.total || totals.total)}</span></div></div></section></div></div>`, "quotes");
+  const company = state.companies.find((c) => c.id === q.companyId) || state.companies[0];
+  const area = [q.village, q.district, q.city].filter(Boolean).join(" / ") || q.projectPlace || "—";
+  return shell(`<div class="content wide quote-detail-page">
+    <section class="quote-hero">
+      <div class="quote-hero-accent"></div>
+      <div class="quote-hero-main">
+        <button class="quote-hero-back" data-link="/quotes" aria-label="Tekliflere dön">${icon("arrow",20)}</button>
+        <img class="quote-hero-logo" src="${e(company?.logo || LOGO_URL)}" alt="${e(company?.name || "Evren Jeofizik")}" />
+        <div class="quote-hero-copy"><p>FİYAT TEKLİFİ</p><div class="quote-hero-title"><h1>${e(q.no)}</h1>${statusPill(q.status)}</div><span>${e(q.customerName)}${q.projectName ? ` · ${e(q.projectName)}` : ""}</span></div>
+        <div class="detail-actions"><button class="secondary-btn btn-sm" data-link="/quotes/new?edit=${q.id}">${icon("edit",15)} Düzenle</button><button class="secondary-btn btn-sm" data-action="preview-pdf" data-id="${q.id}">${icon("eye",15)} PDF Önizle</button><button class="primary-btn btn-sm" data-action="pdf-quote" data-id="${q.id}">${icon("download",15)} PDF İndir</button></div>
+      </div>
+      <div class="quote-hero-meta"><div><span>Teklif Tarihi</span><strong>${formatDate(q.date)}</strong></div><div><span>Geçerlilik Tarihi</span><strong>${formatDate(q.validUntil)}</strong></div><div><span>Hizmet Kalemi</span><strong>${q.items.length}</strong></div><div><span>Teklifi Veren</span><strong>${e(company?.name || "Evren Jeofizik")}</strong></div></div>
+    </section>
+
+    <div class="quote-detail-layout">
+      <div class="quote-detail-main">
+        <section class="quote-info-grid">
+          <article class="quote-info-card card"><div class="quote-card-icon">${icon("building",20)}</div><div><p class="quote-card-kicker">MÜŞTERİ BİLGİLERİ</p><h2>${e(q.customerName)}</h2><dl><div><dt>Yetkili</dt><dd>${e(q.contact || "—")}</dd></div><div><dt>Telefon</dt><dd>${e(q.phone || "—")}</dd></div><div><dt>E-posta</dt><dd>${e(q.email || "—")}</dd></div></dl></div></article>
+          <article class="quote-info-card card"><div class="quote-card-icon">${icon("trend",20)}</div><div><p class="quote-card-kicker">PROJE / SAHA</p><h2>${e(q.projectName || "Proje bilgisi girilmedi")}</h2><dl><div><dt>Çalışma Alanı</dt><dd>${e(area)}</dd></div><div><dt>Ruhsat No</dt><dd>${e(q.licenseNo || "—")}</dd></div><div><dt>Ruhsat Sahibi</dt><dd>${e(q.licenseOwner || "—")}</dd></div></dl></div></article>
+        </section>
+
+        <section class="quote-lines-card card"><div class="quote-section-head"><div><p>HİZMET KAPSAMI</p><h2>Hizmet Kalemleri</h2></div><span>${q.items.length} kalem</span></div><div class="table-wrap"><table class="quote-detail-table"><thead><tr><th>#</th><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.length ? q.items.map((item,index) => `<tr><td class="line-index">${String(index+1).padStart(2,"0")}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td class="nowrap">${money(item.price)}</td><td>%${Number(item.vat)}</td><td class="strong nowrap">${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") : `<tr><td colspan="7" class="empty-state">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table></div></section>
+
+        <div class="quote-lower-grid">
+          <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>UYGULAMA PLANI</p><h2>İş Akışı</h2></div></div><ol class="quote-workflow-list">${(q.workflow || []).map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("") || `<li class="muted">İş akışı eklenmedi.</li>`}</ol></section>
+          <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>TEKLİF KOŞULLARI</p><h2>Açıklama ve Notlar</h2></div></div><div class="quote-notes-preview">${e(q.description || "Açıklama eklenmedi.")}${q.notes ? `<div class="quote-extra-note"><strong>Ek Not</strong>${e(q.notes)}</div>` : ""}</div></section>
+        </div>
+      </div>
+
+      <aside class="quote-summary-panel card">
+        <div class="quote-summary-head"><p>TEKLİF TOPLAMI</p><span>${statusLabel(q.status)}</span></div>
+        <div class="quote-summary-amount"><small>KDV Dahil Genel Toplam</small><strong>${money(q.total || totals.total).replace("—","0,00 TL")}</strong></div>
+        <div class="quote-summary-rows"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—","0,00 TL")}</strong></div><div><span>KDV Toplamı</span><strong>${money(totals.vat).replace("—","0,00 TL")}</strong></div></div>
+        <div class="quote-summary-divider"></div>
+        <div class="quote-summary-company"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><span>Teklifi Veren Firma</span><strong>${e(company?.name || "Evren Jeofizik")}</strong><small>${e(company?.subtitle || company?.email || "Jeofizik · Jeoloji Hizmetleri")}</small></div></div>
+        <button class="primary-btn quote-summary-download" data-action="pdf-quote" data-id="${q.id}">${icon("download",16)} PDF İndir / Yazdır</button>
+        <button class="secondary-btn quote-summary-preview" data-action="preview-pdf" data-id="${q.id}">${icon("eye",16)} Önizlemeyi Aç</button>
+        <p class="quote-summary-help">İndirme düğmesi tarayıcının PDF kaydetme penceresini açar.</p>
+      </aside>
+    </div>
+  </div>`, "quotes");
+}
+
+function renderPdfDocument(q, extraClass = "") {
+  if (!q) return "";
+  const company = state.companies.find((c) => c.id === q.companyId) || state.companies[0];
+  const totals = calcTotals(q.items);
+  const companyContact = [company?.phone, company?.email, company?.website].filter(Boolean).join(" · ");
+  const area = [q.village, q.district, q.city].filter(Boolean).join(" / ") || q.projectPlace || "—";
+  return `<section class="print-sheet ${extraClass}">
+    <div class="print-top-band"><span></span><span></span></div>
+    <header class="print-head">
+      <div class="print-brand"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><p>JEOFİZİK · JEOLOJİ</p><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><span>${e(company?.subtitle || "JEOFİZİK - JEOLOJİ HİZMETLERİ")}</span></div></div>
+      <div class="print-document-card"><span>FİYAT TEKLİFİ</span><strong>${e(q.no || "TASLAK")}</strong><small>${formatDate(q.date)}</small></div>
+    </header>
+    <div class="print-company-contact">${e(company?.address || "")}${company?.address && companyContact ? " · " : ""}${e(companyContact)}</div>
+
+    <section class="print-project-hero">
+      <div><span>TEKLİF SUNULAN</span><strong>${e(q.customerName || "—")}</strong><small>${e(q.contact || "Yetkili bilgisi belirtilmedi")}</small></div>
+      <div><span>PROJE / ÇALIŞMA</span><strong>${e(q.projectName || "Jeofizik ve Jeoloji Hizmetleri")}</strong><small>${e(area)}</small></div>
+    </section>
+
+    <section class="print-meta-grid">
+      <div><span>Teklif Tarihi</span><strong>${formatDate(q.date)}</strong></div><div><span>Geçerlilik Tarihi</span><strong>${formatDate(q.validUntil)}</strong></div><div><span>Telefon</span><strong>${e(q.phone || "—")}</strong></div><div><span>E-posta</span><strong>${e(q.email || "—")}</strong></div><div><span>Ruhsat No</span><strong>${e(q.licenseNo || "—")}</strong></div><div><span>Ruhsat Sahibi</span><strong>${e(q.licenseOwner || "—")}</strong></div>
+    </section>
+
+    <section class="print-block print-services"><div class="print-section-title"><span>01</span><div><small>HİZMET KAPSAMI</small><h2>Hizmet ve Fiyatlandırma</h2></div></div><table class="print-table"><thead><tr><th>No</th><th>Hizmet Açıklaması</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.map((item,index) => `<tr><td>${String(index+1).padStart(2,"0")}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price).replace("—","0,00 TL")}</td><td>%${Number(item.vat)}</td><td><strong>${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100)).replace("—","0,00 TL")}</strong></td></tr>`).join("") || `<tr><td colspan="7">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table><div class="print-total"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—","0,00 TL")}</strong></div><div><span>KDV Toplamı</span><strong>${money(totals.vat).replace("—","0,00 TL")}</strong></div><div class="grand"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total).replace("—","0,00 TL")}</strong></div></div></section>
+
+    ${q.workflow?.length ? `<section class="print-block print-avoid-break"><div class="print-section-title"><span>02</span><div><small>UYGULAMA PLANI</small><h2>İş Akışı</h2></div></div><ol class="print-workflow">${q.workflow.map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("")}</ol></section>` : ""}
+
+    <section class="print-block"><div class="print-section-title"><span>03</span><div><small>TİCARİ KOŞULLAR</small><h2>Açıklama ve Şartlar</h2></div></div><div class="print-notes">${e(q.description || "Teklif koşulları belirtilmemiştir.")}${q.notes ? `<div class="print-extra-note"><strong>EK NOT</strong>${e(q.notes)}</div>` : ""}</div></section>
+
+    <section class="print-signatures print-avoid-break"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "")}</strong><i>Kaşe / İmza</i></div></section>
+    <footer class="print-footer"><div><strong>EVREN JEOFİZİK · JEOLOJİ</strong><span>${e(company?.footer || [company?.bank, company?.iban].filter(Boolean).join(" · ") || "Bilimsel veri, güvenilir mühendislik, sürdürülebilir çözümler.")}</span></div><b>${e(q.no || "TASLAK")}</b></footer>
+  </section>`;
 }
 
 function renderPrintSheet() {
-  if (!printQuoteId) return `<div class="print-sheet"></div>`;
-  const q = state.quotes.find((quote) => quote.id === printQuoteId);
-  if (!q) return `<div class="print-sheet"></div>`;
-  const company = state.companies.find((c) => c.id === q.companyId) || state.companies[0];
-  const totals = calcTotals(q.items);
-  return `<section class="print-sheet"><header class="print-head"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div class="print-company"><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><p>${e(company?.subtitle || "JEOFİZİK - JEOLOJİ HİZMETLERİ")}</p><p>${e(company?.address || "")}</p><p>${e([company?.phone, company?.email, company?.website].filter(Boolean).join(" · "))}</p></div><div class="print-quote-title"><h2>FİYAT TEKLİFİ</h2><p><strong>Teklif No:</strong> ${e(q.no)}</p><p><strong>Tarih:</strong> ${formatDate(q.date)}</p><p><strong>Geçerlilik:</strong> ${formatDate(q.validUntil)}</p></div></header><div class="print-block"><h3>MÜŞTERİ / PROJE BİLGİLERİ</h3><div class="print-grid"><div><span>Firma</span><br><strong>${e(q.customerName)}</strong></div><div><span>Yetkili</span><br><strong>${e(q.contact || "—")}</strong></div><div><span>Proje</span><br><strong>${e(q.projectName || "—")}</strong></div><div><span>Proje Yeri</span><br><strong>${e(q.projectPlace || "—")}</strong></div></div></div><div class="print-block"><h3>HİZMET KALEMLERİ</h3><table class="print-table"><thead><tr><th>No</th><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.map((item,index) => `<tr><td>${index+1}</td><td>${e(item.name)}</td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price)}</td><td>%${Number(item.vat)}</td><td>${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") || `<tr><td colspan="7">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table><div class="print-total"><div><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="grand"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total)}</strong></div></div></div>${q.workflow?.length ? `<div class="print-block"><h3>İŞ AKIŞI</h3><table class="print-table"><tbody>${q.workflow.map((step,index) => `<tr><td style="width:35px">${index+1}</td><td>${e(step)}</td></tr>`).join("")}</tbody></table></div>` : ""}<div class="print-block"><h3>AÇIKLAMA VE ŞARTLAR</h3><div class="print-notes">${e(q.description || "")}${q.notes ? `\n\nNOTLAR:\n${e(q.notes)}` : ""}</div></div><footer class="print-footer">${e(company?.footer || [company?.bank, company?.iban].filter(Boolean).join(" · "))}</footer></section>`;
+  const q = printQuoteData || state.quotes.find((quote) => quote.id === printQuoteId);
+  return q ? renderPdfDocument(q, "print-only") : "";
+}
+
+function renderPdfPreview() {
+  if (!pdfPreviewQuote) return "";
+  return `<div class="pdf-preview-backdrop" role="dialog" aria-modal="true" aria-label="PDF önizleme"><section class="pdf-preview-modal"><header class="pdf-preview-toolbar"><div><p>PDF ÖNİZLEME</p><h2>${e(pdfPreviewQuote.no || "Taslak Teklif")}</h2><span>A4 çıktısının ekranda yaklaşık görünümüdür.</span></div><div class="pdf-preview-actions"><button class="secondary-btn" data-action="close-pdf-preview">Kapat</button><button class="primary-btn" data-action="download-preview-pdf">${icon("download",16)} PDF İndir / Yazdır</button></div></header><div class="pdf-preview-canvas">${renderPdfDocument(pdfPreviewQuote, "pdf-preview-sheet")}</div></section></div>`;
 }
 
 function render() {
@@ -556,6 +653,24 @@ function bindPageEvents() {
   });
 }
 
+function prepareQuoteForPdf(source) {
+  if (!source) return null;
+  const copy = structuredClone(source);
+  copy.total = calcTotals(copy.items || []).total;
+  return copy;
+}
+
+function openPdfPrint(source) {
+  const prepared = prepareQuoteForPdf(source);
+  if (!prepared) return;
+  printQuoteId = prepared.id || null;
+  printQuoteData = prepared;
+  pdfPreviewQuote = null;
+  render();
+  document.title = `${prepared.no || "Teklif"} · Evren Jeofizik`;
+  setTimeout(() => window.print(), 180);
+}
+
 document.addEventListener("click", (event) => {
   const link = event.target.closest("[data-link]");
   if (link) { event.preventDefault(); navigate(link.dataset.link); return; }
@@ -591,6 +706,17 @@ document.addEventListener("click", (event) => {
   if (action === "default-company") { state.companies.forEach((c) => { c.isDefault = c.id === control.dataset.id; }); saveState(); render(); showToast("Varsayılan firma değiştirildi.", "success"); }
   if (action === "toggle-advanced") document.getElementById("advanced-filter")?.classList.toggle("hidden");
   if (action === "quote-tab") { quoteTab = control.dataset.tab; render(); }
+  if (action === "preview-pdf") {
+    pdfPreviewQuote = prepareQuoteForPdf(state.quotes.find((q) => q.id === control.dataset.id));
+    render();
+  }
+  if (action === "preview-pdf-draft") {
+    if (!quoteDraft?.no.trim() || !quoteDraft?.customerName.trim()) return showToast("Önizleme için teklif no ve müşteri adı gereklidir.", "error");
+    pdfPreviewQuote = prepareQuoteForPdf(quoteDraft);
+    render();
+  }
+  if (action === "close-pdf-preview") { pdfPreviewQuote = null; render(); }
+  if (action === "download-preview-pdf") openPdfPrint(pdfPreviewQuote);
   if (action === "add-service-item") {
     const service = state.services.find((s) => s.id === control.dataset.id);
     quoteDraft.items.push({ id: crypto.randomUUID(), serviceId: service.id, name: service.name, unit: service.unit, quantity: 1, price: Number(service.price || 0), vat: Number(service.vat ?? state.settings.vatRate) }); render();
@@ -613,7 +739,7 @@ document.addEventListener("click", (event) => {
     const source = state.quotes.find((q) => q.id === control.dataset.id); const copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.no = `${source.no}-KOPYA`; copy.date = today(); copy.validUntil = addDays(today(), state.settings.validityDays); copy.status = "draft"; state.quotes.push(copy); saveState(); render(); showToast("Teklif kopyalandı.", "success");
   }
   if (action === "pdf-quote") {
-    printQuoteId = control.dataset.id; render(); setTimeout(() => window.print(), 120);
+    openPdfPrint(state.quotes.find((q) => q.id === control.dataset.id));
   }
 });
 
@@ -622,7 +748,7 @@ document.addEventListener("input", (event) => {
   if (model && quoteDraft) {
     quoteDraft[model] = event.target.value;
     if (model === "date" && !quoteDraft.validUntil) quoteDraft.validUntil = addDays(event.target.value, state.settings.validityDays);
-    document.querySelectorAll('[data-action="save-quote"]').forEach((button) => { button.disabled = !(quoteDraft.no.trim() && quoteDraft.customerName.trim()); });
+    document.querySelectorAll('[data-action="save-quote"], [data-action="preview-pdf-draft"]').forEach((button) => { button.disabled = !(quoteDraft.no.trim() && quoteDraft.customerName.trim()); });
   }
   if (event.target.dataset.itemIndex !== undefined && quoteDraft) {
     const index = Number(event.target.dataset.itemIndex); const field = event.target.dataset.itemField; quoteDraft.items[index][field] = ["quantity","price","vat"].includes(field) ? Number(event.target.value) : event.target.value;
@@ -642,7 +768,11 @@ document.addEventListener("change", (event) => {
   }
 });
 
-window.addEventListener("popstate", () => { quoteDraft = null; quoteTab = "info"; render(); });
-window.addEventListener("afterprint", () => { printQuoteId = null; render(); });
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && pdfPreviewQuote) { pdfPreviewQuote = null; render(); }
+});
+
+window.addEventListener("popstate", () => { quoteDraft = null; quoteTab = "info"; pdfPreviewQuote = null; render(); });
+window.addEventListener("afterprint", () => { printQuoteId = null; printQuoteData = null; render(); });
 
 render();
