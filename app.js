@@ -472,38 +472,85 @@ function renderQuoteDetail(id) {
   </div>`, "quotes");
 }
 
+function pdfConditionItems(description) {
+  const sections = String(description || "")
+    .split(/\n\s*\n/)
+    .map((section) => section.trim())
+    .filter(Boolean);
+  if (!sections.length) return [{ title: "TEKLİF KOŞULLARI", text: "Teklif koşulları belirtilmemiştir." }];
+  return sections.map((section, index) => {
+    const clean = section.replace(/^\d+\.\s*/, "");
+    const separator = clean.indexOf(":");
+    if (separator > 0 && separator < 48) {
+      return { title: clean.slice(0, separator).trim(), text: clean.slice(separator + 1).trim() };
+    }
+    return { title: `KOŞUL ${String(index + 1).padStart(2, "0")}`, text: clean };
+  });
+}
+
+function pdfValidityDays(q) {
+  if (!q?.date || !q?.validUntil) return Number(state.settings.validityDays || 30);
+  const start = new Date(`${q.date}T12:00:00`);
+  const end = new Date(`${q.validUntil}T12:00:00`);
+  const days = Math.round((end - start) / 86400000);
+  return Number.isFinite(days) && days > 0 ? days : Number(state.settings.validityDays || 30);
+}
+
 function renderPdfDocument(q, extraClass = "") {
   if (!q) return "";
   const company = state.companies.find((c) => c.id === q.companyId) || state.companies[0];
-  const totals = calcTotals(q.items);
-  const companyContact = [company?.phone, company?.email, company?.website].filter(Boolean).join(" · ");
-  const area = [q.village, q.district, q.city].filter(Boolean).join(" / ") || q.projectPlace || "—";
-  return `<section class="print-sheet ${extraClass}">
-    <div class="print-top-band"><span></span><span></span></div>
-    <header class="print-head">
-      <div class="print-brand"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><p>JEOFİZİK · JEOLOJİ</p><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><span>${e(company?.subtitle || "JEOFİZİK - JEOLOJİ HİZMETLERİ")}</span></div></div>
-      <div class="print-document-card"><span>FİYAT TEKLİFİ</span><strong>${e(q.no || "TASLAK")}</strong><small>${formatDate(q.date)}</small></div>
-    </header>
-    <div class="print-company-contact">${e(company?.address || "")}${company?.address && companyContact ? " · " : ""}${e(companyContact)}</div>
+  const items = Array.isArray(q.items) ? q.items : [];
+  const totals = calcTotals(items);
+  const validityDays = pdfValidityDays(q);
+  const companyContact = [company?.phone, company?.email, company?.website].filter(Boolean).join("  |  ");
+  const companyLegal = [company?.taxOffice && `Vergi Dairesi: ${company.taxOffice}`, company?.taxNo && `Vergi No: ${company.taxNo}`].filter(Boolean).join("  |  ");
+  const firstItems = items.slice(0, 6);
+  const continuationChunks = [];
+  for (let index = 6; index < items.length; index += 10) continuationChunks.push(items.slice(index, index + 10));
+  const pageCount = 2 + continuationChunks.length;
+  const conditions = pdfConditionItems(q.description);
+  const summaryNote = q.notes || (continuationChunks.length ? "Hizmet ve ürün kalemleri takip eden sayfada devam etmektedir." : "Detaylı iş akışı ve ticari koşullar teklifin devam sayfasında yer almaktadır.");
 
-    <section class="print-project-hero">
-      <div><span>TEKLİF SUNULAN</span><strong>${e(q.customerName || "—")}</strong><small>${e(q.contact || "Yetkili bilgisi belirtilmedi")}</small></div>
-      <div><span>PROJE / ÇALIŞMA</span><strong>${e(q.projectName || "Jeofizik ve Jeoloji Hizmetleri")}</strong><small>${e(area)}</small></div>
-    </section>
+  const header = () => `<header class="pdf-header">
+    <div class="pdf-brand"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><strong>${e(company?.subtitle || "JEOFİZİK · JEOLOJİ HİZMETLERİ")}</strong>${company?.address ? `<p>${e(company.address)}</p>` : ""}${companyContact ? `<p>${e(companyContact)}</p>` : ""}${companyLegal ? `<p>${e(companyLegal)}</p>` : ""}</div></div>
+    <div class="pdf-document-card"><h2>TEKLİF FORMU</h2><dl><div><dt>Teklif No</dt><dd>${e(q.no || "TASLAK")}</dd></div><div><dt>Tarih</dt><dd>${formatDate(q.date)}</dd></div><div><dt>Geçerlilik</dt><dd>${validityDays} gün</dd></div></dl></div>
+  </header><div class="pdf-gold-rule"></div>`;
 
-    <section class="print-meta-grid">
-      <div><span>Teklif Tarihi</span><strong>${formatDate(q.date)}</strong></div><div><span>Geçerlilik Tarihi</span><strong>${formatDate(q.validUntil)}</strong></div><div><span>Telefon</span><strong>${e(q.phone || "—")}</strong></div><div><span>E-posta</span><strong>${e(q.email || "—")}</strong></div><div><span>Ruhsat No</span><strong>${e(q.licenseNo || "—")}</strong></div><div><span>Ruhsat Sahibi</span><strong>${e(q.licenseOwner || "—")}</strong></div>
-    </section>
+  const footer = (pageNumber) => `<footer class="pdf-footer"><span class="pdf-page-number">Sayfa ${pageNumber} / ${pageCount}</span><div><strong>${e(company?.name || "EVREN JEOFİZİK")}</strong><span>${e(companyContact || company?.footer || "Jeofizik · Jeoloji Hizmetleri")}</span><b>Bu teklif ${validityDays} gün süreyle geçerlidir.</b></div></footer>`;
 
-    <section class="print-block print-services"><div class="print-section-title"><span>01</span><div><small>HİZMET KAPSAMI</small><h2>Hizmet ve Fiyatlandırma</h2></div></div><table class="print-table"><thead><tr><th>No</th><th>Hizmet Açıklaması</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.map((item,index) => `<tr><td>${String(index+1).padStart(2,"0")}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price).replace("—","0,00 TL")}</td><td>%${Number(item.vat)}</td><td><strong>${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100)).replace("—","0,00 TL")}</strong></td></tr>`).join("") || `<tr><td colspan="7">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table><div class="print-total"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—","0,00 TL")}</strong></div><div><span>KDV Toplamı</span><strong>${money(totals.vat).replace("—","0,00 TL")}</strong></div><div class="grand"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total).replace("—","0,00 TL")}</strong></div></div></section>
+  const sectionTitle = (title) => `<div class="pdf-section-title"><i></i><h2>${title}</h2></div>`;
 
-    ${q.workflow?.length ? `<section class="print-block print-avoid-break"><div class="print-section-title"><span>02</span><div><small>UYGULAMA PLANI</small><h2>İş Akışı</h2></div></div><ol class="print-workflow">${q.workflow.map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("")}</ol></section>` : ""}
+  const itemRows = (pageItems, startIndex = 0) => pageItems.map((item, index) => `<tr><td>${startIndex + index + 1}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit || "—")}</td><td>${Number(item.quantity || 0)}</td><td>${money(item.price).replace("—", "0,00 TL")}</td><td><strong>${money(Number(item.quantity || 0) * Number(item.price || 0)).replace("—", "0,00 TL")}</strong></td></tr>`).join("") || `<tr><td colspan="6" class="pdf-empty-row">Hizmet kalemi bulunmuyor.</td></tr>`;
 
-    <section class="print-block"><div class="print-section-title"><span>03</span><div><small>TİCARİ KOŞULLAR</small><h2>Açıklama ve Şartlar</h2></div></div><div class="print-notes">${e(q.description || "Teklif koşulları belirtilmemiştir.")}${q.notes ? `<div class="print-extra-note"><strong>EK NOT</strong>${e(q.notes)}</div>` : ""}</div></section>
+  const itemsTable = (pageItems, startIndex = 0) => `<table class="pdf-items-table"><thead><tr><th>#</th><th>Açıklama</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>Tutar</th></tr></thead><tbody>${itemRows(pageItems, startIndex)}</tbody></table>`;
 
-    <section class="print-signatures print-avoid-break"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "")}</strong><i>Kaşe / İmza</i></div></section>
-    <footer class="print-footer"><div><strong>EVREN JEOFİZİK · JEOLOJİ</strong><span>${e(company?.footer || [company?.bank, company?.iban].filter(Boolean).join(" · ") || "Bilimsel veri, güvenilir mühendislik, sürdürülebilir çözümler.")}</span></div><b>${e(q.no || "TASLAK")}</b></footer>
-  </section>`;
+  const totalsBlock = () => `<div class="pdf-totals"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—", "0,00 TL")}</strong></div><div><span>KDV Toplamı</span><strong>${money(totals.vat).replace("—", "0,00 TL")}</strong></div><div class="pdf-grand-total"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total).replace("—", "0,00 TL")}</strong></div></div>`;
+
+  const firstPage = `<article class="pdf-page pdf-primary-page">${header()}
+    <main class="pdf-page-content">
+      <section class="pdf-section">${sectionTitle("MÜŞTERİ BİLGİLERİ")}<div class="pdf-customer-box"><strong>${e(q.customerName || "—")}</strong>${q.contact || q.phone || q.email ? `<p>${[q.contact, q.phone, q.email].filter(Boolean).map(e).join("  |  ")}</p>` : ""}${q.projectName ? `<small>${e(q.projectName)}</small>` : ""}</div></section>
+      <section class="pdf-section">${sectionTitle("ÇALIŞILACAK ALAN BİLGİLERİ")}<div class="pdf-area-grid"><div><span>İl</span><strong>${e(q.city || "—")}</strong></div><div><span>İlçe</span><strong>${e(q.district || "—")}</strong></div><div><span>Mahalle / Köy</span><strong>${e(q.village || q.projectPlace || "—")}</strong></div><div><span>Ruhsat No</span><strong>${e(q.licenseNo || "—")}</strong></div><div class="wide"><span>Ruhsat Sahibi</span><strong>${e(q.licenseOwner || q.customerName || "—")}</strong></div></div></section>
+      <section class="pdf-section pdf-items-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ")}${itemsTable(firstItems)}${continuationChunks.length ? `<div class="pdf-continued-note">Hizmet kalemleri sonraki sayfada devam etmektedir.</div>` : totalsBlock()}</section>
+      <section class="pdf-section pdf-note-section">${sectionTitle("AÇIKLAMA")}<div class="pdf-note-box">${e(summaryNote)}</div></section>
+    </main>${footer(1)}
+  </article>`;
+
+  const continuationPages = continuationChunks.map((chunk, chunkIndex) => {
+    const pageNumber = chunkIndex + 2;
+    const isLast = chunkIndex === continuationChunks.length - 1;
+    return `<article class="pdf-page pdf-continuation-page">${header()}<main class="pdf-page-content"><section class="pdf-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ · DEVAM")}${itemsTable(chunk, 6 + chunkIndex * 10)}${isLast ? totalsBlock() : `<div class="pdf-continued-note">Hizmet kalemleri sonraki sayfada devam etmektedir.</div>`}</section></main>${footer(pageNumber)}</article>`;
+  }).join("");
+
+  const detailsPageNumber = pageCount;
+  const detailsPage = `<article class="pdf-page pdf-secondary-page">${header()}
+    <main class="pdf-page-content">
+      <section class="pdf-section">${sectionTitle("İŞ AKIŞI")}<table class="pdf-workflow-table"><thead><tr><th>İş Akışı No</th><th>İş Aşaması</th></tr></thead><tbody>${(q.workflow || []).map((step, index) => `<tr><td>${index + 1}</td><td>${e(step)}</td></tr>`).join("") || `<tr><td colspan="2" class="pdf-empty-row">İş akışı belirtilmemiştir.</td></tr>`}</tbody></table></section>
+      <section class="pdf-section pdf-conditions-section">${sectionTitle("TEKLİF KOŞULLARI")}<div class="pdf-conditions-grid">${conditions.map((condition, index) => `<article><span>${String(index + 1).padStart(2, "0")}</span><div><strong>${e(condition.title)}</strong><p>${e(condition.text)}</p></div></article>`).join("")}</div>${q.notes ? `<div class="pdf-extra-note"><strong>EK NOT</strong><span>${e(q.notes)}</span></div>` : ""}</section>
+      <section class="pdf-approval"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "")}</strong><i>Kaşe / İmza</i></div></section>
+    </main>${footer(detailsPageNumber)}
+  </article>`;
+
+  return `<section class="print-sheet ${extraClass}">${firstPage}${continuationPages}${detailsPage}</section>`;
 }
 
 function renderPrintSheet() {
@@ -513,7 +560,8 @@ function renderPrintSheet() {
 
 function renderPdfPreview() {
   if (!pdfPreviewQuote) return "";
-  return `<div class="pdf-preview-backdrop" role="dialog" aria-modal="true" aria-label="PDF önizleme"><section class="pdf-preview-modal"><header class="pdf-preview-toolbar"><div><p>PDF ÖNİZLEME</p><h2>${e(pdfPreviewQuote.no || "Taslak Teklif")}</h2><span>A4 çıktısının ekranda yaklaşık görünümüdür.</span></div><div class="pdf-preview-actions"><button class="secondary-btn" data-action="close-pdf-preview">Kapat</button><button class="primary-btn" data-action="download-preview-pdf">${icon("download",16)} PDF İndir / Yazdır</button></div></header><div class="pdf-preview-canvas">${renderPdfDocument(pdfPreviewQuote, "pdf-preview-sheet")}</div></section></div>`;
+  const extraPages = Math.max(0, Math.ceil(Math.max(0, (pdfPreviewQuote.items || []).length - 6) / 10));
+  return `<div class="pdf-preview-backdrop" role="dialog" aria-modal="true" aria-label="PDF önizleme"><section class="pdf-preview-modal"><header class="pdf-preview-toolbar"><div><p>PDF ÖNİZLEME</p><h2>${e(pdfPreviewQuote.no || "Taslak Teklif")}</h2><span>${2 + extraPages} sayfalık A4 teklif düzeni · Evren kurumsal şablonu</span></div><div class="pdf-preview-actions"><button class="secondary-btn" data-action="close-pdf-preview">Kapat</button><button class="primary-btn" data-action="download-preview-pdf">${icon("download",16)} PDF İndir / Yazdır</button></div></header><div class="pdf-preview-canvas">${renderPdfDocument(pdfPreviewQuote, "pdf-preview-sheet")}</div></section></div>`;
 }
 
 function render() {
