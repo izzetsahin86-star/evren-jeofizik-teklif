@@ -1,5 +1,7 @@
-const LOGO_URL = "https://media.base44.com/images/public/user_69ef7eb7026d02a5b9d7dc54/9876a00ea_EVRENLOGO.png";
+const LOGO_URL = "/evren-logo.png";
 const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+const AUTH_KEY = "evren-jeofizik-auth";
+const PASSWORD_HASH = "01972c9696c0048d238b6c77df3c2999d4dd227f0d6b12271e4044f1e51b92e4";
 
 const workflowDefaults = [
   "Ön Hazırlık ve Alan Belirleme",
@@ -125,13 +127,19 @@ let state = loadState();
 let quoteDraft = null;
 let quoteTab = "info";
 let printQuoteId = null;
+let isAuthenticated = sessionStorage.getItem(AUTH_KEY) === "1";
 
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return structuredClone(initialState);
     const parsed = JSON.parse(raw);
-    return { ...structuredClone(initialState), ...parsed };
+    const merged = { ...structuredClone(initialState), ...parsed };
+    merged.companies = (merged.companies || []).map((company) => ({
+      ...company,
+      logo: !company.logo || company.logo.includes("media.base44.com") ? LOGO_URL : company.logo
+    }));
+    return merged;
   } catch {
     return structuredClone(initialState);
   }
@@ -256,6 +264,31 @@ function shell(pageHtml, active) {
       <main class="main">${pageHtml}</main>
     </div>
     ${renderPrintSheet()}`;
+}
+
+function renderLogin() {
+  return `<main class="login-page">
+    <div class="login-glow login-glow-one"></div>
+    <div class="login-glow login-glow-two"></div>
+    <section class="login-card" aria-labelledby="login-title">
+      <div class="login-brand-panel">
+        <div class="login-logo-ring"><img src="${LOGO_URL}" alt="Evren Jeofizik Jeoloji logosu" /></div>
+        <p class="login-kicker">JEOFİZİK · JEOLOJİ</p>
+        <h1 id="login-title">Evren Jeofizik</h1>
+        <p>Teklif ve müşteri yönetim sistemine güvenli giriş</p>
+      </div>
+      <div class="login-form-panel">
+        <div class="login-form-heading"><span>Yönetim Paneli</span><h2>Hoş Geldiniz</h2><p>Devam etmek için kullanıcı bilgilerinizi girin.</p></div>
+        <form id="login-form" class="login-form" autocomplete="on">
+          <div class="field login-field"><label for="login-username">Kullanıcı Adı</label><input id="login-username" name="username" autocomplete="username" placeholder="Kullanıcı adınızı girin" autofocus required /></div>
+          <div class="field login-field"><label for="login-password">Şifre</label><input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Şifrenizi girin" required /></div>
+          <p class="login-error" id="login-error" role="alert"></p>
+          <button class="login-submit" type="submit"><span>Giriş Yap</span><span aria-hidden="true">→</span></button>
+        </form>
+        <p class="login-footer">© ${new Date().getFullYear()} Evren Jeofizik · Tüm hakları saklıdır.</p>
+      </div>
+    </section>
+  </main>`;
 }
 
 function pageHeader(title, subtitle, action = "") {
@@ -387,6 +420,12 @@ function renderPrintSheet() {
 }
 
 function render() {
+  if (!isAuthenticated) {
+    document.getElementById("app").innerHTML = renderLogin();
+    document.title = "Evren Jeofizik · Giriş";
+    bindLoginEvents();
+    return;
+  }
   const route = routeInfo();
   let html;
   if (route.page === "dashboard") html = renderDashboard();
@@ -399,6 +438,33 @@ function render() {
   document.getElementById("app").innerHTML = html;
   document.title = `Evren Jeofizik Teklif · ${route.page === "dashboard" ? "Ana Panel" : route.page === "quotes" ? "Teklifler" : route.page === "customers" ? "Müşteriler" : route.page === "catalog" ? "Hizmet Kataloğu" : route.page === "settings" ? "Ayarlar" : "Teklif"}`;
   bindPageEvents();
+}
+
+async function hashValue(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function bindLoginEvents() {
+  document.getElementById("login-form")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = formDataObject(event.currentTarget);
+    const validUser = String(data.username || "").trim().toLocaleLowerCase("tr-TR") === "evren";
+    const validPassword = await hashValue(data.password || "") === PASSWORD_HASH;
+    const error = document.getElementById("login-error");
+    if (!validUser || !validPassword) {
+      error.textContent = "Kullanıcı adı veya şifre hatalı.";
+      event.currentTarget.classList.remove("login-shake");
+      void event.currentTarget.offsetWidth;
+      event.currentTarget.classList.add("login-shake");
+      return;
+    }
+    sessionStorage.setItem(AUTH_KEY, "1");
+    isAuthenticated = true;
+    render();
+    showToast("Hoş geldiniz Evren.", "success");
+  });
 }
 
 function showToast(message, type = "") {
@@ -498,7 +564,13 @@ document.addEventListener("click", (event) => {
   const action = control.dataset.action;
   if (action === "open-menu") document.getElementById("app-shell")?.classList.add("menu-open");
   if (action === "close-menu") document.getElementById("app-shell")?.classList.remove("menu-open");
-  if (action === "logout") showToast("Oturum yerel uygulamada açık kalır.");
+  if (action === "logout") {
+    sessionStorage.removeItem(AUTH_KEY);
+    isAuthenticated = false;
+    quoteDraft = null;
+    quoteTab = "info";
+    render();
+  }
   if (action === "close-modal") closeModal();
   if (action === "new-customer") customerModal();
   if (action === "edit-customer") customerModal(state.customers.find((c) => c.id === control.dataset.id));
