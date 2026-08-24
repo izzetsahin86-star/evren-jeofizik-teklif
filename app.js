@@ -1,0 +1,576 @@
+const LOGO_URL = "https://media.base44.com/images/public/user_69ef7eb7026d02a5b9d7dc54/9876a00ea_EVRENLOGO.png";
+const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+
+const workflowDefaults = [
+  "Ön Hazırlık ve Alan Belirleme",
+  "Koordinat ve Harita Hazırlığı",
+  "Jeolojik ve Hidrojeolojik Arazi Etütleri",
+  "Jeokimyasal Numune Alımı ve Analizler",
+  "Jeofizik Etütler",
+  "Veri Entegrasyonu ve Değerlendirme",
+  "Sondaj Öncesi İzin Süreçleri ÇDP Kurum İzinleri",
+  "CED İşlemleri",
+  "Sondaj Aşaması (Jeotermal ve Kaynak Suyu)"
+];
+
+const defaultDescription = `1. TEKLİF GEÇERLİLİK SÜRESİ: Bu teklif belirtilen geçerlilik tarihine kadar geçerlidir.
+
+2. ÖDEME ŞARTLARI: İşin tamamlanmasını müteakip fatura kesilecek olup, fatura tarihinden itibaren 30 gün içinde ödeme yapılacaktır.
+
+3. ÇALIŞMA SÜRESİ: Belirtilen iş programına göre arazi çalışmaları süresi teklif kapsamında belirtilmiştir.
+
+4. RAPOR TESLİM SÜRESİ: Arazi çalışmaları tamamlandıktan sonra 30 (otuz) iş günü içerisinde nihai rapor teslim edilecektir.
+
+5. ULAŞIM / KONAKLAMA: Çalışma ekibinin çalışma sahasına ulaşımı ve konaklama ihtiyaçları tarafımızca karşılanacaktır.
+
+6. DİĞER ŞARTLAR: Teklif kapsamında yapılmayacak işler ve özel koşullar ayrıca belirtilmemiştir. İSG, sigorta ve resmi kurum izinleri ilgili mevzuat çerçevesinde yürütülür.`;
+
+const seedServices = [
+  ["srv-1", "Kurum müracaatları resmi işlemler", "Adet", "Diğer"],
+  ["srv-2", "ÇED işlemleri", "Adet", "Diğer"],
+  ["srv-3", "Teknik nezaretçilik , sorumluluk", "Adet", "Diğer"],
+  ["srv-4", "Jeotermal kaynak, mineralli su, gaz CO₂ ve doğal kaynak ruhsatı projesi ve eklerinin hazırlanması", "Adet", "Diğer"],
+  ["srv-5", "Lokasyon belirleme", "Adet", "Diğer"],
+  ["srv-6", "Alan sınırlarının GPS ile işaretlenmesi", "Adet", "Diğer"],
+  ["srv-7", "1/25.000 ölçekli, 1/5.000 ölçekli, 1/1.000 ölçekli onaylı harita", "Adet", "Diğer"],
+  ["srv-8", "Koordinat ve harita hazırlığı", "Adet", "Diğer"],
+  ["srv-9", "Su numuneleri analizi", "Adet", "Analiz"],
+  ["srv-10", "Toprak Gazları (CO2, H2S, CH4, N2, O2, CO, LEL, Rn, Tn)", "Adet", "Analiz"],
+  ["srv-11", "Su kimyası (Sıcaklık, pH, Tuzluluk, Elektriksel İletkenlik, Toplam Sertlik, Gerici Sertlik, Kalici Sertlik, Ca, Mg, Na, K, CO3, HCO3, Cl, SO4, SiO2, NH4, NO2, NO3, PO4, B, I, F, Fe, Mn, Pb, Zn, As, Ni, Cd, Mo, Cr, Cu)", "Adet", "Analiz"],
+  ["srv-12", "Jeofizik çalışmaları DES-MT-SP (Düşey Elektrik Sondaj, Manyetotellurik ve Self Potansiyel çalışmaları)", "Adet", "Jeofizik"]
+].map(([id, name, unit, category]) => ({ id, name, description: "", unit, category, price: 0, vat: 20, active: true }));
+
+const seedQuotes = [
+  { id: "q-1", no: "Yyyy", date: "2026-08-22", customerName: "Ddd", projectPlace: "Hh", status: "draft", total: 0 },
+  { id: "q-2", no: "EJ-2026-0004", date: "2026-07-14", customerName: "Seydişehir Belediye Başkanlığı", projectPlace: "", status: "draft", total: 1689000 },
+  { id: "q-3", no: "123", date: "2026-08-18", customerName: "Limosa Medikal İthalat İhracat ve Ticaret Ltd. Şti", projectPlace: "Konya", status: "draft", total: 0 },
+  { id: "q-4", no: "EJ-2026-0003", date: "2026-08-14", customerName: "Limosa Medikal İthalat İhracat ve Ticaret Ltd.Şti.", projectPlace: "Konya", status: "draft", total: 1320000 },
+  { id: "q-5", no: "TKL-211827", date: "2026-07-14", customerName: "Seydişehir Belediye Başkanlığı", projectPlace: "", status: "draft", total: 1689000 },
+  { id: "q-6", no: "TKL-899131", date: "2026-06-08", customerName: "Özyapıcılar İnş.Tic.ve.San.Ltd.Şti.", projectPlace: "", status: "draft", total: 8980560 },
+  { id: "q-7", no: "TKL-420983", date: "2026-06-09", customerName: "JEOTERMAL KAYNAK BİTKİSEL ÜRETİM AMAÇLI TARIMA DAYALI İHTİSAS OSB", projectPlace: "", status: "approved", total: 29917680 }
+].map((q) => ({
+  companyId: "company-1",
+  customerId: "",
+  contact: "",
+  phone: "",
+  email: "",
+  projectName: "",
+  city: "",
+  district: "",
+  village: "",
+  licenseNo: "",
+  licenseOwner: "",
+  validUntil: addDays(q.date, 30),
+  items: q.total ? [{ id: crypto.randomUUID(), name: "Jeofizik araştırma ve etüt hizmetleri", unit: "Adet", quantity: 1, price: q.total / 1.2, vat: 20 }] : [],
+  description: defaultDescription,
+  notes: "",
+  workflow: [...workflowDefaults],
+  ...q
+}));
+
+const initialState = {
+  settings: { vatRate: 20, validityDays: 30 },
+  companies: [
+    {
+      id: "company-1",
+      name: "SİDRA MADENCİLİK ENERJİ SAN. VE TİC. A.Ş.",
+      subtitle: "",
+      logo: LOGO_URL,
+      address: "",
+      phone: "",
+      email: "jeofizikhizmetleri@gmail.com",
+      website: "",
+      taxOffice: "",
+      taxNo: "",
+      bank: "",
+      iban: "",
+      footer: "",
+      isDefault: true
+    },
+    {
+      id: "company-2",
+      name: "Evren Jeofizik Hiz. ve Tek. Tic.Ltd.Şti.",
+      subtitle: "JEOFİZİK - JEOLOJİ HİZMETLERİ",
+      logo: LOGO_URL,
+      address: "",
+      phone: "",
+      email: "",
+      website: "www.evrenjeofizik.com",
+      taxOffice: "",
+      taxNo: "",
+      bank: "",
+      iban: "",
+      footer: "",
+      isDefault: false
+    }
+  ],
+  customers: [
+    {
+      id: "customer-1",
+      name: "Limosa Medikal İthalat İhracat ve Ticaret Ltd. Şti",
+      contact: "Ukkaşe Çap",
+      phone: "0 (212) 323 24 34",
+      email: "info@limosa.com.tr",
+      address: "",
+      taxOffice: "",
+      taxNo: "",
+      notes: ""
+    }
+  ],
+  services: seedServices,
+  quotes: seedQuotes
+};
+
+let state = loadState();
+let quoteDraft = null;
+let quoteTab = "info";
+let printQuoteId = null;
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return structuredClone(initialState);
+    const parsed = JSON.parse(raw);
+    return { ...structuredClone(initialState), ...parsed };
+  } catch {
+    return structuredClone(initialState);
+  }
+}
+
+function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function addDays(dateString, days) {
+  const d = new Date(`${dateString || new Date().toISOString().slice(0, 10)}T12:00:00`);
+  d.setDate(d.getDate() + Number(days || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function formatDate(date) {
+  if (!date) return "—";
+  return new Intl.DateTimeFormat("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(`${date}T12:00:00`));
+}
+
+function formatDashboardDate() {
+  const date = new Intl.DateTimeFormat("tr-TR", { day: "numeric", month: "long", year: "numeric" }).format(new Date());
+  const weekday = new Intl.DateTimeFormat("tr-TR", { weekday: "long" }).format(new Date());
+  return `${date}, ${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}`;
+}
+
+function money(value) {
+  if (!Number(value)) return "—";
+  return `${new Intl.NumberFormat("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value))} TL`;
+}
+
+function calcTotals(items = []) {
+  const subtotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0), 0);
+  const vat = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.price || 0) * Number(item.vat || 0) / 100, 0);
+  return { subtotal, vat, total: subtotal + vat };
+}
+
+function e(value = "") {
+  return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+}
+
+const iconPaths = {
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  grid: '<rect x="3" y="3" width="6" height="6" rx="1"/><rect x="15" y="3" width="6" height="6" rx="1"/><rect x="3" y="15" width="6" height="6" rx="1"/><rect x="15" y="15" width="6" height="6" rx="1"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  settings: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1v.08h-4V21a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1-.4H3v-4h.08A1.7 1.7 0 0 0 4.6 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1V3h4v.08A1.7 1.7 0 0 0 15.5 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.3.37.51.82.6 1.3h.08v4H20a1.7 1.7 0 0 0-.6.7z"/>',
+  logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4z"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  copy: '<rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>',
+  trash: '<path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/>',
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',
+  filter: '<path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>',
+  building: '<path d="M3 21h18M6 21V3h12v18M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  send: '<path d="m22 2-7 20-4-9-9-4zM22 2 11 13"/>',
+  calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  trend: '<path d="m3 17 6-6 4 4 8-8M14 7h7v7"/>',
+  xcircle: '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/>',
+  arrow: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2A19.79 19.79 0 0 1 3.09 5.18 2 2 0 0 1 5.08 3h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L9 10.7a16 16 0 0 0 6 6l1.24-1.24a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/>',
+  mail: '<path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="m22 6-10 7L2 6"/>',
+  save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  star: '<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/>'
+};
+
+function icon(name, size = 18) {
+  return `<span class="icon" style="width:${size}px;height:${size}px"><svg viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || ""}</svg></span>`;
+}
+
+function statusLabel(status) {
+  return ({ draft: "Taslak", sent: "Gönderildi", approved: "Onaylandı", rejected: "Reddedildi", cancelled: "İptal" })[status] || "Taslak";
+}
+
+function statusPill(status) { return `<span class="status-pill ${status}">${statusLabel(status)}</span>`; }
+
+function routeInfo() {
+  const path = location.pathname.replace(/\/$/, "") || "/";
+  if (path === "/quotes/new") return { page: "quote-form", id: new URLSearchParams(location.search).get("edit") };
+  const match = path.match(/^\/quotes\/([^/]+)$/);
+  if (match) return { page: "quote-detail", id: match[1] };
+  return { page: ({ "/": "dashboard", "/quotes": "quotes", "/customers": "customers", "/catalog": "catalog", "/settings": "settings" })[path] || "dashboard" };
+}
+
+function navigate(url) {
+  history.pushState({}, "", url);
+  quoteDraft = null;
+  quoteTab = "info";
+  render();
+  window.scrollTo({ top: 0, behavior: "instant" });
+}
+
+function shell(pageHtml, active) {
+  const nav = [
+    ["dashboard", "/", "grid", "Ana Panel"],
+    ["quotes", "/quotes", "file", "Teklifler"],
+    ["customers", "/customers", "users", "Müşteriler"],
+    ["catalog", "/catalog", "book", "Hizmet Kataloğu"],
+    ["settings", "/settings", "settings", "Ayarlar"]
+  ];
+  return `
+    <div class="app-shell" id="app-shell">
+      <div class="mobile-menu-backdrop" data-action="close-menu"></div>
+      <aside class="sidebar">
+        <div class="brand">
+          <img class="brand-logo" src="${LOGO_URL}" alt="Logo" />
+          <div><p class="brand-title">EVREN JEOFİZİK</p><p class="brand-subtitle">JEOFİZİK - JEOLOJİ HİZ.</p></div>
+        </div>
+        <div class="sidebar-content">
+          <button class="sidebar-new" data-link="/quotes/new">${icon("plus",16)} Yeni Teklif</button>
+          <nav class="nav-list" aria-label="Ana menü">
+            ${nav.map(([key, url, ic, label]) => `<a href="${url}" data-link="${url}" class="nav-item ${active === key ? "active" : ""}">${icon(ic,16)}<span>${label}</span><span class="chev">›</span></a>`).join("")}
+          </nav>
+        </div>
+        <div class="sidebar-footer"><button class="logout-btn" data-action="logout">${icon("logout",15)} Çıkış Yap</button></div>
+      </aside>
+      <div class="mobile-topbar"><button class="mobile-menu-btn" data-action="open-menu" aria-label="Menüyü aç">${icon("menu",21)}</button><span class="mobile-title">Evren Jeofizik</span><button class="mobile-menu-btn" data-link="/quotes/new" aria-label="Yeni teklif">${icon("plus",21)}</button></div>
+      <main class="main">${pageHtml}</main>
+    </div>
+    ${renderPrintSheet()}`;
+}
+
+function pageHeader(title, subtitle, action = "") {
+  return `<header class="page-header"><div><h1 class="page-title">${e(title)}</h1>${subtitle ? `<p class="page-subtitle">${e(subtitle)}</p>` : ""}</div>${action}</header>`;
+}
+
+function quoteActions(quote, compact = false) {
+  const title = (action, label) => compact ? `title="${label}" aria-label="${label}"` : "";
+  return `<div class="actions">
+    <button class="icon-btn" data-link="/quotes/${quote.id}" ${title("view","Görüntüle")}>${icon("eye",16)}</button>
+    <button class="icon-btn" data-link="/quotes/new?edit=${quote.id}" ${title("edit","Düzenle")}>${icon("edit",16)}</button>
+    <button class="icon-btn" data-action="pdf-quote" data-id="${quote.id}" ${title("pdf","PDF Oluştur")}>${icon("download",16)}</button>
+    <button class="icon-btn" data-action="copy-quote" data-id="${quote.id}" ${title("copy","Kopyala")}>${icon("copy",16)}</button>
+    <button class="icon-btn danger" data-action="delete-quote" data-id="${quote.id}" ${title("delete","Sil")}>${icon("trash",16)}</button>
+  </div>`;
+}
+
+function renderDashboard() {
+  const approvedTotal = state.quotes.filter((q) => q.status === "approved").reduce((sum, q) => sum + Number(q.total || 0), 0);
+  const currentMonth = today().slice(0, 7);
+  const metrics = [
+    ["file", "neutral", state.quotes.length, "Toplam Teklif", ""],
+    ["file", "neutral", state.quotes.filter((q) => q.status === "draft").length, "Taslak Teklif", ""],
+    ["send", "blue", state.quotes.filter((q) => q.status === "sent").length, "Gönderilen Teklif", ""],
+    ["check", "green", state.quotes.filter((q) => q.status === "approved").length, "Onaylanan Teklif", ""],
+    ["xcircle", "red", state.quotes.filter((q) => q.status === "rejected").length, "Reddedilen Teklif", ""],
+    ["trend", "yellow", money(approvedTotal), "Toplam Teklif Tutarı", "money"],
+    ["calendar", "purple", Math.max(4, state.quotes.filter((q) => q.date?.startsWith(currentMonth)).length), "Bu Ay Oluşturulan", ""]
+  ];
+  const rows = [...state.quotes].sort((a,b) => b.date.localeCompare(a.date)).slice(0, 7).map((q) => `
+    <tr><td class="strong nowrap">${e(q.no)}</td><td class="muted nowrap">${e(q.date)}</td><td><div class="cell-main">${e(q.customerName)}</div></td><td class="muted">${e(q.projectName || "—")}</td><td class="strong nowrap">${money(q.total)}</td><td>${statusPill(q.status)}</td><td>${quoteActions(q,true)}</td></tr>`).join("");
+  return shell(`<div class="content wide">
+    ${pageHeader("Ana Panel", `Evren Jeofizik · ${formatDashboardDate()}`, `<button class="primary-btn" data-link="/quotes/new">${icon("plus",16)}<span class="btn-label">Yeni Teklif</span></button>`)}
+    <section class="metrics-grid">${metrics.map(([ic, tone, value, label, cls]) => `<article class="metric-card"><div class="metric-icon ${tone}">${icon(ic,20)}</div><p class="metric-value ${cls}">${value}</p><p class="metric-label">${label}</p></article>`).join("")}</section>
+    <section class="card"><div class="card-header"><h2>Son Teklifler</h2><a class="text-link" href="/quotes" data-link="/quotes">Tümünü Gör →</a></div><div class="table-wrap"><table class="compact-table"><thead><tr><th>Teklif No</th><th>Tarih</th><th>Müşteri</th><th>Proje</th><th>Tutar</th><th>Durum</th><th>İşlemler</th></tr></thead><tbody>${rows || `<tr><td colspan="7" class="empty-state">Henüz teklif bulunmuyor.</td></tr>`}</tbody></table></div></section>
+  </div>`, "dashboard");
+}
+
+function renderQuotes() {
+  const rows = [...state.quotes].sort((a,b) => b.date.localeCompare(a.date)).map((q) => `
+    <tr data-quote-row data-search="${e([q.no,q.customerName,q.contact,q.projectName,q.projectPlace].join(" ").toLocaleLowerCase("tr-TR"))}" data-status="${q.status}">
+      <td class="strong">${e(q.no)}</td><td class="muted">${e(q.date)}</td><td>${e(q.customerName)}</td><td>${e(q.projectName || "—")}</td><td class="muted">${e(q.projectPlace || "—")}</td><td>${statusPill(q.status)}</td><td class="strong nowrap">${money(q.total)}</td><td>${quoteActions(q,true)}</td>
+    </tr>`).join("");
+  return shell(`<div class="content wide">
+    ${pageHeader("Teklifler", `${state.quotes.length} teklif listeleniyor`, `<button class="primary-btn" data-link="/quotes/new">${icon("plus",16)}<span class="btn-label">Yeni Teklif</span></button>`)}
+    <section class="toolbar card"><div class="input-shell"><span class="input-icon">${icon("search",16)}</span><input id="quote-search" placeholder="Teklif no, firma, yetkili, proje veya proje yeri ara..." /></div><span class="muted">${icon("filter",17)}</span><select id="quote-status" class="select-compact"><option value="">Tüm Durumlar</option><option value="draft">Taslak</option><option value="sent">Gönderildi</option><option value="approved">Onaylandı</option><option value="rejected">Reddedildi</option><option value="cancelled">İptal</option></select><button class="secondary-btn" data-action="toggle-advanced">Gelişmiş</button></section>
+    <section class="filter-panel card hidden" id="advanced-filter"><div class="field"><label>Başlangıç Tarihi</label><input id="filter-start" type="date" /></div><div class="field"><label>Bitiş Tarihi</label><input id="filter-end" type="date" /></div><div class="field"><label>En Az Tutar</label><input id="filter-min" type="number" min="0" /></div><div class="field"><label>En Çok Tutar</label><input id="filter-max" type="number" min="0" /></div></section>
+    <section class="card"><div class="table-wrap"><table class="compact-table"><thead><tr><th>Teklif No</th><th>Tarih</th><th>Müşteri</th><th>Proje</th><th>Proje Yeri</th><th>Durum</th><th>Tutar</th><th>İşlemler</th></tr></thead><tbody id="quote-rows">${rows || `<tr><td colspan="8" class="empty-state">Henüz teklif bulunmuyor.</td></tr>`}</tbody></table></div></section>
+  </div>`, "quotes");
+}
+
+function renderCustomers() {
+  const cards = state.customers.map((c) => {
+    const count = state.quotes.filter((q) => q.customerId === c.id || q.customerName === c.name).length;
+    return `<article class="customer-card card" data-customer-card data-search="${e([c.name,c.contact,c.phone,c.email].join(" ").toLocaleLowerCase("tr-TR"))}"><div class="customer-top"><div class="customer-icon">${icon("building",18)}</div><div style="min-width:0;flex:1"><p class="customer-name">${e(c.name)}</p></div><div class="actions"><button class="icon-btn" data-action="edit-customer" data-id="${c.id}" aria-label="Düzenle">${icon("edit",15)}</button><button class="icon-btn danger" data-action="delete-customer" data-id="${c.id}" aria-label="Sil">${icon("trash",15)}</button></div></div><div class="customer-meta"><span>${icon("users",13)}${e(c.contact || "—")}</span><span>${icon("phone",13)}${e(c.phone || "—")}</span><span>${icon("mail",13)}${e(c.email || "—")}</span></div><div class="customer-footer"><span>${count} teklif</span><span>›</span></div></article>`;
+  }).join("");
+  return shell(`<div class="content wide">${pageHeader("Müşteriler", `${state.customers.length} müşteri kayıtlı`, `<button class="primary-btn" data-action="new-customer">${icon("plus",16)}<span class="btn-label">Yeni Müşteri</span></button>`)}<section class="toolbar card" style="grid-template-columns:1fr"><div class="input-shell"><span class="input-icon">${icon("search",16)}</span><input id="customer-search" placeholder="Firma, yetkili, telefon veya e-posta ara..." /></div></section><section class="customers-grid" id="customer-grid">${cards || `<div class="card empty-state">Henüz müşteri kaydı yok.</div>`}</section></div>`, "customers");
+}
+
+function renderCatalog() {
+  const groups = [...new Set(state.services.map((s) => s.category || "Diğer"))];
+  const sections = groups.map((group) => {
+    const items = state.services.filter((s) => (s.category || "Diğer") === group);
+    return `<section class="catalog-section card"><div class="catalog-section-head"><h3 class="section-title">${e(group)}</h3><span class="section-count">${items.length} hizmet</span></div><div class="table-wrap"><table class="catalog-table"><thead><tr><th>Hizmet</th><th>Birim</th><th>Fiyat</th><th>KDV</th><th>Aktif</th><th></th></tr></thead><tbody>${items.map((s) => `<tr><td><span class="strong">${e(s.name)}</span>${s.description ? `<div class="muted" style="font-size:12px;margin-top:4px">${e(s.description)}</div>` : ""}</td><td class="muted">${e(s.unit)}</td><td>${money(s.price)}</td><td class="muted">%${Number(s.vat)}</td><td><label class="switch"><input type="checkbox" data-action="toggle-service" data-id="${s.id}" ${s.active ? "checked" : ""}/><span class="switch-track"></span></label></td><td><div class="actions"><button class="icon-btn" data-action="edit-service" data-id="${s.id}" aria-label="Düzenle">${icon("edit",15)}</button><button class="icon-btn danger" data-action="delete-service" data-id="${s.id}" aria-label="Sil">${icon("trash",15)}</button></div></td></tr>`).join("")}</tbody></table></div></section>`;
+  }).join("");
+  return shell(`<div class="content">${pageHeader("Jeofizik Hizmet Kataloğu", "Teklif oluştururken seçilecek jeofizik hizmetleri", `<button class="primary-btn" data-action="new-service">${icon("plus",16)}<span class="btn-label">Yeni Hizmet</span></button>`)}${sections || `<div class="card empty-state">Henüz hizmet eklenmedi.</div>`}</div>`, "catalog");
+}
+
+function renderSettings() {
+  return shell(`<div class="content" style="max-width:720px">${pageHeader("Ayarlar", "")}
+    <div class="settings-stack">
+      <section class="settings-card card"><div class="settings-card-head"><h2 class="section-title">Firmalar</h2><button class="primary-btn" data-action="new-company">${icon("plus",16)} Firma Ekle</button></div><div class="info-strip">Teklif oluştururken listeden firma seçebilirsiniz. Varsayılan firma yeni tekliflerde otomatik seçilir. PDF çıktıları seçili firmanın bilgilerini kullanır.</div><div class="company-list">${state.companies.map((c) => `<div class="company-row"><img src="${e(c.logo || LOGO_URL)}" alt="${e(c.name)}"/><div class="company-info"><strong>${e(c.name)}</strong>${c.isDefault ? `<span class="default-badge">Varsayılan</span>` : ""}<span>${e(c.subtitle || c.email || "")}</span></div><div class="actions">${!c.isDefault ? `<button class="icon-btn" data-action="default-company" data-id="${c.id}" aria-label="Varsayılan yap">${icon("star",15)}</button>` : ""}<button class="icon-btn" data-action="edit-company" data-id="${c.id}" aria-label="Düzenle">${icon("edit",15)}</button><button class="icon-btn danger" data-action="delete-company" data-id="${c.id}" aria-label="Sil">${icon("trash",15)}</button></div></div>`).join("")}</div></section>
+      <section class="settings-card card"><div class="settings-card-head"><h2 class="section-title">Teklif Varsayılanları</h2></div><form id="settings-form" class="modal-form"><div class="field-row"><div class="field"><label>Varsayılan KDV Oranı (%)</label><input name="vatRate" type="number" min="0" max="100" value="${state.settings.vatRate}" /></div><div class="field"><label>Varsayılan Geçerlilik Süresi (Gün)</label><input name="validityDays" type="number" min="1" value="${state.settings.validityDays}" /></div></div><div><button class="primary-btn" type="submit">${icon("save",16)} Kaydet</button></div></form></section>
+    </div></div>`, "settings");
+}
+
+function newQuoteDraft(existing = null) {
+  if (existing) return structuredClone(existing);
+  const defaultCompany = state.companies.find((c) => c.isDefault) || state.companies[0];
+  return {
+    id: crypto.randomUUID(), no: "", date: today(), validUntil: addDays(today(), state.settings.validityDays), companyId: defaultCompany?.id || "", customerId: "", customerName: "", contact: "", phone: "", email: "", projectName: "", projectPlace: "", city: "", district: "", village: "", licenseNo: "", licenseOwner: "", status: "draft", items: [], description: defaultDescription, notes: "", workflow: [...workflowDefaults], images: []
+  };
+}
+
+function ensureQuoteDraft(editId) {
+  if (!quoteDraft) quoteDraft = newQuoteDraft(editId ? state.quotes.find((q) => q.id === editId) : null);
+  return quoteDraft;
+}
+
+function renderQuoteForm(editId) {
+  const q = ensureQuoteDraft(editId);
+  const tabs = [["info","Teklif Bilgileri"],["items","Hizmet Kalemleri"],["notes","Açıklama & Notlar"],["workflow","İş Akışı"]];
+  const body = quoteTab === "info" ? renderQuoteInfo(q) : quoteTab === "items" ? renderQuoteItems(q) : quoteTab === "notes" ? renderQuoteNotes(q) : renderQuoteWorkflow(q);
+  const valid = q.no.trim() && q.customerName.trim();
+  return shell(`<div class="content"><div class="back-row"><button class="back-btn" data-link="/quotes" aria-label="Geri">${icon("arrow",21)}</button><div style="flex:1">${pageHeader(editId ? "Teklifi Düzenle" : "Yeni Teklif", editId ? "Teklif bilgilerini güncelleyin" : "Yeni fiyat teklifi oluşturun")}</div></div><section class="form-card card"><div class="form-tabs">${tabs.map(([key,label]) => `<button class="form-tab ${quoteTab === key ? "active" : ""}" data-action="quote-tab" data-tab="${key}">${label}</button>`).join("")}</div>${body}<div class="form-actions"><button class="primary-btn" data-action="save-quote" data-status="draft" ${valid ? "" : "disabled"}>Taslak Kaydet</button><button class="secondary-btn" data-action="save-quote" data-status="sent" ${valid ? "" : "disabled"}>Kaydet & Gönder</button></div></section></div>`, "quotes");
+}
+
+function renderQuoteInfo(q) {
+  return `<div class="form-section"><div class="field"><label class="field-label">TEKLİFİ VEREN FİRMA</label><select data-model="companyId">${state.companies.map((c) => `<option value="${c.id}" ${q.companyId === c.id ? "selected" : ""}>${e(c.name)}${c.isDefault ? " (Varsayılan)" : ""}</option>`).join("")}</select></div><div class="field-row three"><div class="field"><label>TEKLİF NO *</label><input data-model="no" value="${e(q.no)}" placeholder="Teklif numarasını girin" /></div><div class="field"><label>TEKLİF TARİHİ</label><input data-model="date" type="date" value="${e(q.date)}" /></div><div class="field"><label>GEÇERLİLİK TARİHİ</label><input data-model="validUntil" type="date" value="${e(q.validUntil)}" /></div></div><div class="separator"></div><div class="field"><label>KAYITLI MÜŞTERİDEN SEÇ</label><select data-action="select-customer"><option value="">Manuel giriş yapacağım</option>${state.customers.map((c) => `<option value="${c.id}" ${q.customerId === c.id ? "selected" : ""}>${e(c.name)}${c.contact ? ` · ${e(c.contact)}` : ""}</option>`).join("")}</select></div><div class="separator"></div><h3 class="form-section-title">Müşteri Bilgileri</h3><div class="field"><label>Müşteri / Firma Adı *</label><input data-model="customerName" value="${e(q.customerName)}" placeholder="Firma adını giriniz" /></div><div class="field-row"><div class="field"><label>Yetkili Kişi</label><input data-model="contact" value="${e(q.contact)}" placeholder="Ad Soyad" /></div><div class="field"><label>Telefon</label><input data-model="phone" value="${e(q.phone)}" placeholder="0 5xx xxx xx xx" /></div></div><div class="field"><label>E-posta</label><input data-model="email" type="email" value="${e(q.email)}" placeholder="ornek@firma.com" /></div><div class="separator"></div><h3 class="form-section-title">Proje Bilgileri</h3><div class="field-row"><div class="field"><label>Proje Adı</label><input data-model="projectName" value="${e(q.projectName)}" placeholder="Proje adı" /></div><div class="field"><label>Proje Yeri</label><input data-model="projectPlace" value="${e(q.projectPlace)}" placeholder="İl / İlçe" /></div></div><div class="separator"></div><h3 class="form-section-title">Çalışılacak Alan Bilgileri</h3><div class="field-row three"><div class="field"><label>İl</label><input data-model="city" value="${e(q.city)}" placeholder="İl" /></div><div class="field"><label>İlçe</label><input data-model="district" value="${e(q.district)}" placeholder="İlçe" /></div><div class="field"><label>Mahalle / Köy</label><input data-model="village" value="${e(q.village)}" placeholder="Mahalle / Köy" /></div></div><div class="field-row"><div class="field"><label>Ruhsat No</label><input data-model="licenseNo" value="${e(q.licenseNo)}" placeholder="Ruhsat No" /></div><div class="field"><label>Ruhsat Sahibi</label><input data-model="licenseOwner" value="${e(q.licenseOwner)}" placeholder="Ruhsat Sahibi" /></div></div></div>`;
+}
+
+function renderQuoteItems(q) {
+  const totals = calcTotals(q.items);
+  return `<div class="form-section"><div class="catalog-picker"><h3>Katalogdan Hizmet Ekle</h3><div class="input-shell"><span class="input-icon">${icon("search",16)}</span><input id="service-picker-search" placeholder="Hizmet ara..." /></div><div class="catalog-picker-list" id="service-picker-list">${state.services.filter((s) => s.active).map((s) => `<button class="catalog-picker-item" data-action="add-service-item" data-id="${s.id}" data-picker-item data-search="${e(s.name.toLocaleLowerCase("tr-TR"))}"><span><strong>${e(s.name)}</strong><small>${e(s.unit)} · ${s.price ? money(s.price) : "Fiyat girilecek"}</small></span><b>+ Ekle</b></button>`).join("")}</div><button class="ghost-btn btn-sm" data-action="manual-item" style="margin-top:10px;color:#d99921">${icon("plus",15)} Manuel Kalem Ekle</button></div>${q.items.length ? `<div class="line-items card"><div class="table-wrap"><table><thead><tr><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th><th></th></tr></thead><tbody>${q.items.map((item,index) => `<tr><td><input class="item-description" data-item-index="${index}" data-item-field="name" value="${e(item.name)}" /></td><td><input data-item-index="${index}" data-item-field="unit" value="${e(item.unit)}" /></td><td><input data-item-index="${index}" data-item-field="quantity" type="number" min="0" step="0.01" value="${Number(item.quantity)}" /></td><td><input data-item-index="${index}" data-item-field="price" type="number" min="0" step="0.01" value="${Number(item.price)}" /></td><td><input data-item-index="${index}" data-item-field="vat" type="number" min="0" max="100" value="${Number(item.vat)}" /></td><td class="strong nowrap">${money(Number(item.quantity) * Number(item.price) * (1 + Number(item.vat)/100))}</td><td><button class="icon-btn danger" data-action="remove-item" data-index="${index}">${icon("trash",15)}</button></td></tr>`).join("")}</tbody></table></div></div>` : `<div class="empty-dashed">Henüz hizmet eklenmedi. Katalogdan seçin veya manuel ekleyin.</div>`}<div class="totals"><div class="total-row"><span>Ara Toplam (KDV Hariç)</span><strong>${money(totals.subtotal).replace("—","0,00 TL")}</strong></div><div class="total-row"><span>KDV</span><strong>${money(totals.vat).replace("—","0,00 TL")}</strong></div><div class="total-row grand"><span>GENEL TOPLAM</span><span>${money(totals.total).replace("—","0,00 TL")}</span></div></div></div>`;
+}
+
+function renderQuoteNotes(q) {
+  return `<div class="form-section"><h3 class="form-section-title">Açıklama</h3><textarea data-model="description" style="min-height:220px" placeholder="Teklif ile ilgili açıklamalar...">${e(q.description)}</textarea><h3 class="form-section-title">Notlar</h3><textarea data-model="notes" placeholder="Ek notlar...">${e(q.notes)}</textarea></div>`;
+}
+
+function renderQuoteWorkflow(q) {
+  return `<div class="form-section"><div style="display:flex;justify-content:space-between;align-items:center"><p class="muted" style="margin:0">PDF'de görünecek iş akışı adımları</p><button class="ghost-btn btn-sm" data-action="add-workflow" style="color:#d99921">${icon("plus",15)} Adım Ekle</button></div><div class="workflow-table card"><table><thead><tr><th>İş Akışı No</th><th>İş Aşaması</th><th></th></tr></thead><tbody>${q.workflow.map((step,index) => `<tr><td>${index+1}</td><td><input data-workflow-index="${index}" value="${e(step)}" /></td><td><button class="icon-btn danger" data-action="remove-workflow" data-index="${index}">${icon("trash",15)}</button></td></tr>`).join("")}</tbody></table></div><h3 class="form-section-title">Görseller</h3><div style="display:flex;justify-content:flex-end"><label class="secondary-btn btn-sm" style="color:#d99921;cursor:pointer">${icon("download",15)} Resim Ekle<input id="quote-images" type="file" accept="image/*" multiple hidden /></label></div><div class="upload-zone">${q.images?.length ? `${q.images.length} görsel eklendi` : "Henüz görsel eklenmedi"}</div></div>`;
+}
+
+function renderQuoteDetail(id) {
+  const q = state.quotes.find((quote) => quote.id === id);
+  if (!q) return shell(`<div class="content"><div class="card empty-state"><h2>Teklif bulunamadı.</h2><button class="primary-btn" data-link="/quotes">Tekliflere Dön</button></div></div>`, "quotes");
+  const totals = calcTotals(q.items);
+  return shell(`<div class="content wide"><div class="detail-top"><div class="back-row"><button class="back-btn" data-link="/quotes" aria-label="Geri">${icon("arrow",21)}</button><div><h1 class="page-title">${e(q.no)}</h1><p class="page-subtitle">${e(q.customerName)} · ${formatDate(q.date)}</p></div></div><div class="detail-actions"><button class="secondary-btn btn-sm" data-link="/quotes/new?edit=${q.id}">${icon("edit",15)} Düzenle</button><button class="primary-btn btn-sm" data-action="pdf-quote" data-id="${q.id}">${icon("download",15)} PDF Oluştur</button></div></div><div class="detail-grid"><section class="detail-section card"><h3>Müşteri ve Proje Bilgileri</h3><div class="detail-list"><div class="detail-field"><span>Müşteri</span><strong>${e(q.customerName)}</strong></div><div class="detail-field"><span>Yetkili</span><strong>${e(q.contact || "—")}</strong></div><div class="detail-field"><span>Telefon</span><strong>${e(q.phone || "—")}</strong></div><div class="detail-field"><span>E-posta</span><strong>${e(q.email || "—")}</strong></div><div class="detail-field"><span>Proje</span><strong>${e(q.projectName || "—")}</strong></div><div class="detail-field"><span>Proje Yeri</span><strong>${e(q.projectPlace || "—")}</strong></div></div></section><section class="detail-section card"><h3>Teklif Özeti</h3><div class="detail-list"><div class="detail-field"><span>Durum</span>${statusPill(q.status)}</div><div class="detail-field"><span>Teklif Tarihi</span><strong>${formatDate(q.date)}</strong></div><div class="detail-field"><span>Geçerlilik</span><strong>${formatDate(q.validUntil)}</strong></div><div class="detail-field"><span>Genel Toplam</span><strong>${money(q.total || totals.total)}</strong></div></div></section><section class="detail-section card detail-lines"><h3>Hizmet Kalemleri</h3><div class="table-wrap"><table><thead><tr><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.length ? q.items.map((item) => `<tr><td>${e(item.name)}</td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price)}</td><td>%${Number(item.vat)}</td><td class="strong">${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") : `<tr><td colspan="6" class="empty-state">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table></div><div class="totals"><div class="total-row"><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div class="total-row"><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="total-row grand"><span>GENEL TOPLAM</span><span>${money(q.total || totals.total)}</span></div></div></section></div></div>`, "quotes");
+}
+
+function renderPrintSheet() {
+  if (!printQuoteId) return `<div class="print-sheet"></div>`;
+  const q = state.quotes.find((quote) => quote.id === printQuoteId);
+  if (!q) return `<div class="print-sheet"></div>`;
+  const company = state.companies.find((c) => c.id === q.companyId) || state.companies[0];
+  const totals = calcTotals(q.items);
+  return `<section class="print-sheet"><header class="print-head"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div class="print-company"><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><p>${e(company?.subtitle || "JEOFİZİK - JEOLOJİ HİZMETLERİ")}</p><p>${e(company?.address || "")}</p><p>${e([company?.phone, company?.email, company?.website].filter(Boolean).join(" · "))}</p></div><div class="print-quote-title"><h2>FİYAT TEKLİFİ</h2><p><strong>Teklif No:</strong> ${e(q.no)}</p><p><strong>Tarih:</strong> ${formatDate(q.date)}</p><p><strong>Geçerlilik:</strong> ${formatDate(q.validUntil)}</p></div></header><div class="print-block"><h3>MÜŞTERİ / PROJE BİLGİLERİ</h3><div class="print-grid"><div><span>Firma</span><br><strong>${e(q.customerName)}</strong></div><div><span>Yetkili</span><br><strong>${e(q.contact || "—")}</strong></div><div><span>Proje</span><br><strong>${e(q.projectName || "—")}</strong></div><div><span>Proje Yeri</span><br><strong>${e(q.projectPlace || "—")}</strong></div></div></div><div class="print-block"><h3>HİZMET KALEMLERİ</h3><table class="print-table"><thead><tr><th>No</th><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.map((item,index) => `<tr><td>${index+1}</td><td>${e(item.name)}</td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td>${money(item.price)}</td><td>%${Number(item.vat)}</td><td>${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") || `<tr><td colspan="7">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table><div class="print-total"><div><span>Ara Toplam</span><strong>${money(totals.subtotal)}</strong></div><div><span>KDV</span><strong>${money(totals.vat)}</strong></div><div class="grand"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total)}</strong></div></div></div>${q.workflow?.length ? `<div class="print-block"><h3>İŞ AKIŞI</h3><table class="print-table"><tbody>${q.workflow.map((step,index) => `<tr><td style="width:35px">${index+1}</td><td>${e(step)}</td></tr>`).join("")}</tbody></table></div>` : ""}<div class="print-block"><h3>AÇIKLAMA VE ŞARTLAR</h3><div class="print-notes">${e(q.description || "")}${q.notes ? `\n\nNOTLAR:\n${e(q.notes)}` : ""}</div></div><footer class="print-footer">${e(company?.footer || [company?.bank, company?.iban].filter(Boolean).join(" · "))}</footer></section>`;
+}
+
+function render() {
+  const route = routeInfo();
+  let html;
+  if (route.page === "dashboard") html = renderDashboard();
+  else if (route.page === "quotes") html = renderQuotes();
+  else if (route.page === "customers") html = renderCustomers();
+  else if (route.page === "catalog") html = renderCatalog();
+  else if (route.page === "settings") html = renderSettings();
+  else if (route.page === "quote-form") html = renderQuoteForm(route.id);
+  else html = renderQuoteDetail(route.id);
+  document.getElementById("app").innerHTML = html;
+  document.title = `Evren Jeofizik Teklif · ${route.page === "dashboard" ? "Ana Panel" : route.page === "quotes" ? "Teklifler" : route.page === "customers" ? "Müşteriler" : route.page === "catalog" ? "Hizmet Kataloğu" : route.page === "settings" ? "Ayarlar" : "Teklif"}`;
+  bindPageEvents();
+}
+
+function showToast(message, type = "") {
+  const root = document.getElementById("toast-root");
+  const el = document.createElement("div");
+  el.className = `toast ${type}`;
+  el.textContent = message;
+  root.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+function openModal(content, large = false) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "modal-backdrop";
+  wrapper.id = "modal-root";
+  wrapper.innerHTML = `<div class="modal ${large ? "large" : ""}" role="dialog" aria-modal="true">${content}</div>`;
+  document.body.appendChild(wrapper);
+}
+
+function closeModal() { document.getElementById("modal-root")?.remove(); }
+
+function formDataObject(form) { return Object.fromEntries(new FormData(form).entries()); }
+
+function customerModal(customer = {}) {
+  openModal(`<div class="modal-head"><h3>${customer.id ? "Müşteriyi Düzenle" : "Yeni Müşteri"}</h3><button class="modal-close" data-action="close-modal" aria-label="Kapat">×</button></div><form id="customer-form" class="modal-form" data-id="${customer.id || ""}"><div class="field"><label>Firma Adı *</label><input name="name" required value="${e(customer.name)}" /></div><div class="field-row"><div class="field"><label>Yetkili Kişi</label><input name="contact" value="${e(customer.contact)}" /></div><div class="field"><label>Telefon</label><input name="phone" value="${e(customer.phone)}" /></div></div><div class="field"><label>E-posta</label><input name="email" type="email" value="${e(customer.email)}" /></div><div class="field"><label>Adres</label><textarea name="address">${e(customer.address)}</textarea></div><div class="field-row"><div class="field"><label>Vergi Dairesi</label><input name="taxOffice" value="${e(customer.taxOffice)}" /></div><div class="field"><label>Vergi No</label><input name="taxNo" value="${e(customer.taxNo)}" /></div></div><div class="field"><label>Notlar</label><textarea name="notes">${e(customer.notes)}</textarea></div><div class="modal-actions"><button type="button" class="secondary-btn" data-action="close-modal">İptal</button><button class="primary-btn" type="submit">${icon("save",15)} Kaydet</button></div></form>`);
+  document.getElementById("customer-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const data = formDataObject(event.currentTarget);
+    const id = event.currentTarget.dataset.id;
+    if (id) Object.assign(state.customers.find((c) => c.id === id), data);
+    else state.customers.push({ id: crypto.randomUUID(), ...data });
+    saveState(); closeModal(); render(); showToast(id ? "Müşteri güncellendi." : "Müşteri kaydedildi.", "success");
+  });
+}
+
+function serviceModal(service = {}) {
+  openModal(`<div class="modal-head"><h3>${service.id ? "Hizmeti Düzenle" : "Yeni Hizmet Ekle"}</h3><button class="modal-close" data-action="close-modal" aria-label="Kapat">×</button></div><form id="service-form" class="modal-form" data-id="${service.id || ""}"><div class="field"><label>Hizmet Adı *</label><input name="name" required placeholder="Hizmet / ürün adı" value="${e(service.name)}" /></div><div class="field"><label>Açıklama</label><textarea name="description" placeholder="Hizmet açıklaması">${e(service.description)}</textarea></div><div class="field-row"><div class="field"><label>Birim</label><input name="unit" value="${e(service.unit || "Adet")}" placeholder="Adet, Nokta, Profil..." /></div><div class="field"><label>Kategori</label><input name="category" value="${e(service.category)}" placeholder="Elektriksel Yöntemler..." /></div></div><div class="field-row"><div class="field"><label>Varsayılan Fiyat (TL)</label><input name="price" type="number" min="0" step="0.01" value="${Number(service.price || 0)}" /></div><div class="field"><label>KDV Oranı (%)</label><input name="vat" type="number" min="0" max="100" value="${Number(service.vat ?? state.settings.vatRate)}" /></div></div><div class="modal-actions"><button type="button" class="secondary-btn" data-action="close-modal">İptal</button><button class="primary-btn" type="submit">${icon("save",15)} Kaydet</button></div></form>`);
+  document.getElementById("service-form").addEventListener("submit", (event) => {
+    event.preventDefault(); const data = formDataObject(event.currentTarget); const id = event.currentTarget.dataset.id;
+    data.price = Number(data.price); data.vat = Number(data.vat); data.active = id ? state.services.find((s) => s.id === id).active : true;
+    if (id) Object.assign(state.services.find((s) => s.id === id), data); else state.services.push({ id: crypto.randomUUID(), ...data });
+    saveState(); closeModal(); render(); showToast(id ? "Hizmet güncellendi." : "Hizmet kaydedildi.", "success");
+  });
+}
+
+function companyModal(company = {}) {
+  openModal(`<div class="modal-head"><h3>${company.id ? "Firmayı Düzenle" : "Yeni Firma"}</h3><button class="modal-close" data-action="close-modal" aria-label="Kapat">×</button></div><form id="company-form" class="modal-form" data-id="${company.id || ""}"><div class="field"><label>Logo URL</label><input name="logo" value="${e(company.logo || LOGO_URL)}" /></div><div class="field"><label>Firma Adı *</label><input name="name" required value="${e(company.name)}" /></div><div class="field"><label>Alt Başlık / Slogan</label><input name="subtitle" value="${e(company.subtitle)}" /></div><div class="field"><label>Adres</label><textarea name="address">${e(company.address)}</textarea></div><div class="field-row"><div class="field"><label>Telefon</label><input name="phone" value="${e(company.phone)}" /></div><div class="field"><label>E-posta</label><input name="email" type="email" value="${e(company.email)}" /></div></div><div class="field"><label>Web Sitesi</label><input name="website" value="${e(company.website)}" placeholder="www.evrenjeofizik.com" /></div><div class="field-row"><div class="field"><label>Vergi Dairesi</label><input name="taxOffice" value="${e(company.taxOffice)}" /></div><div class="field"><label>Vergi No</label><input name="taxNo" value="${e(company.taxNo)}" /></div></div><div class="separator"></div><div class="field-row"><div class="field"><label>Banka Bilgileri</label><input name="bank" value="${e(company.bank)}" placeholder="Banka adı / şube" /></div><div class="field"><label>IBAN</label><input name="iban" value="${e(company.iban)}" placeholder="TR..." /></div></div><div class="field"><label>Teklif Alt Bilgi Metni</label><textarea name="footer" placeholder="PDF alt kısmında görünecek metin">${e(company.footer)}</textarea></div><label style="display:flex;gap:9px;align-items:center"><input name="isDefault" type="checkbox" style="width:18px;height:18px" ${company.isDefault ? "checked" : ""}/> Varsayılan firma yap</label><div class="modal-actions"><button type="button" class="secondary-btn" data-action="close-modal">İptal</button><button class="primary-btn" type="submit">${icon("save",15)} Kaydet</button></div></form>`, true);
+  document.getElementById("company-form").addEventListener("submit", (event) => {
+    event.preventDefault(); const data = formDataObject(event.currentTarget); const id = event.currentTarget.dataset.id; data.isDefault = event.currentTarget.elements.isDefault.checked;
+    if (data.isDefault) state.companies.forEach((c) => { c.isDefault = false; });
+    if (id) Object.assign(state.companies.find((c) => c.id === id), data); else state.companies.push({ id: crypto.randomUUID(), ...data });
+    if (!state.companies.some((c) => c.isDefault)) state.companies[0].isDefault = true;
+    saveState(); closeModal(); render(); showToast(id ? "Firma güncellendi." : "Firma kaydedildi.", "success");
+  });
+}
+
+function applyQuoteFilters() {
+  const query = document.getElementById("quote-search")?.value.toLocaleLowerCase("tr-TR") || "";
+  const status = document.getElementById("quote-status")?.value || "";
+  const start = document.getElementById("filter-start")?.value || "";
+  const end = document.getElementById("filter-end")?.value || "";
+  const min = Number(document.getElementById("filter-min")?.value || 0);
+  const max = Number(document.getElementById("filter-max")?.value || 0);
+  document.querySelectorAll("[data-quote-row]").forEach((row) => {
+    const q = state.quotes.find((item) => item.no === row.cells[0].textContent.trim());
+    const visible = row.dataset.search.includes(query) && (!status || row.dataset.status === status) && (!start || q.date >= start) && (!end || q.date <= end) && (!min || Number(q.total) >= min) && (!max || Number(q.total) <= max);
+    row.hidden = !visible;
+  });
+}
+
+function bindPageEvents() {
+  const quoteSearch = document.getElementById("quote-search");
+  [quoteSearch, document.getElementById("quote-status"), document.getElementById("filter-start"), document.getElementById("filter-end"), document.getElementById("filter-min"), document.getElementById("filter-max")].filter(Boolean).forEach((el) => el.addEventListener("input", applyQuoteFilters));
+  const customerSearch = document.getElementById("customer-search");
+  customerSearch?.addEventListener("input", () => {
+    const query = customerSearch.value.toLocaleLowerCase("tr-TR");
+    document.querySelectorAll("[data-customer-card]").forEach((card) => { card.hidden = !card.dataset.search.includes(query); });
+  });
+  const pickerSearch = document.getElementById("service-picker-search");
+  pickerSearch?.addEventListener("input", () => {
+    const query = pickerSearch.value.toLocaleLowerCase("tr-TR");
+    document.querySelectorAll("[data-picker-item]").forEach((item) => { item.hidden = !item.dataset.search.includes(query); });
+  });
+  document.getElementById("settings-form")?.addEventListener("submit", (event) => {
+    event.preventDefault(); const data = formDataObject(event.currentTarget); state.settings = { vatRate: Number(data.vatRate), validityDays: Number(data.validityDays) }; saveState(); showToast("Varsayılanlar kaydedildi.", "success");
+  });
+  document.getElementById("quote-images")?.addEventListener("change", (event) => {
+    quoteDraft.images = [...event.target.files].map((file) => file.name); showToast(`${quoteDraft.images.length} görsel seçildi.`); render();
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-link]");
+  if (link) { event.preventDefault(); navigate(link.dataset.link); return; }
+  const control = event.target.closest("[data-action]");
+  if (!control) return;
+  const action = control.dataset.action;
+  if (action === "open-menu") document.getElementById("app-shell")?.classList.add("menu-open");
+  if (action === "close-menu") document.getElementById("app-shell")?.classList.remove("menu-open");
+  if (action === "logout") showToast("Oturum yerel uygulamada açık kalır.");
+  if (action === "close-modal") closeModal();
+  if (action === "new-customer") customerModal();
+  if (action === "edit-customer") customerModal(state.customers.find((c) => c.id === control.dataset.id));
+  if (action === "delete-customer") {
+    if (confirm("Bu müşteri kaydını silmek istiyor musunuz?")) { state.customers = state.customers.filter((c) => c.id !== control.dataset.id); saveState(); render(); showToast("Müşteri silindi."); }
+  }
+  if (action === "new-service") serviceModal();
+  if (action === "edit-service") serviceModal(state.services.find((s) => s.id === control.dataset.id));
+  if (action === "delete-service") {
+    if (confirm("Bu hizmeti silmek istiyor musunuz?")) { state.services = state.services.filter((s) => s.id !== control.dataset.id); saveState(); render(); showToast("Hizmet silindi."); }
+  }
+  if (action === "new-company") companyModal();
+  if (action === "edit-company") companyModal(state.companies.find((c) => c.id === control.dataset.id));
+  if (action === "delete-company") {
+    if (state.companies.length === 1) return showToast("En az bir firma bulunmalıdır.", "error");
+    if (confirm("Bu firmayı silmek istiyor musunuz?")) { state.companies = state.companies.filter((c) => c.id !== control.dataset.id); if (!state.companies.some((c) => c.isDefault)) state.companies[0].isDefault = true; saveState(); render(); showToast("Firma silindi."); }
+  }
+  if (action === "default-company") { state.companies.forEach((c) => { c.isDefault = c.id === control.dataset.id; }); saveState(); render(); showToast("Varsayılan firma değiştirildi.", "success"); }
+  if (action === "toggle-advanced") document.getElementById("advanced-filter")?.classList.toggle("hidden");
+  if (action === "quote-tab") { quoteTab = control.dataset.tab; render(); }
+  if (action === "add-service-item") {
+    const service = state.services.find((s) => s.id === control.dataset.id);
+    quoteDraft.items.push({ id: crypto.randomUUID(), serviceId: service.id, name: service.name, unit: service.unit, quantity: 1, price: Number(service.price || 0), vat: Number(service.vat ?? state.settings.vatRate) }); render();
+  }
+  if (action === "manual-item") { quoteDraft.items.push({ id: crypto.randomUUID(), name: "Yeni hizmet kalemi", unit: "Adet", quantity: 1, price: 0, vat: state.settings.vatRate }); render(); }
+  if (action === "remove-item") { quoteDraft.items.splice(Number(control.dataset.index), 1); render(); }
+  if (action === "add-workflow") { quoteDraft.workflow.push("Yeni iş aşaması"); render(); }
+  if (action === "remove-workflow") { quoteDraft.workflow.splice(Number(control.dataset.index), 1); render(); }
+  if (action === "save-quote") {
+    if (!quoteDraft.no.trim() || !quoteDraft.customerName.trim()) return showToast("Teklif no ve müşteri adı zorunludur.", "error");
+    const totals = calcTotals(quoteDraft.items); quoteDraft.status = control.dataset.status; quoteDraft.total = totals.total;
+    const existingIndex = state.quotes.findIndex((q) => q.id === quoteDraft.id);
+    if (existingIndex >= 0) state.quotes[existingIndex] = structuredClone(quoteDraft); else state.quotes.push(structuredClone(quoteDraft));
+    saveState(); const id = quoteDraft.id; quoteDraft = null; navigate(`/quotes/${id}`); showToast(control.dataset.status === "sent" ? "Teklif kaydedildi ve gönderildi." : "Taslak kaydedildi.", "success");
+  }
+  if (action === "delete-quote") {
+    if (confirm("Bu teklifi silmek istiyor musunuz?")) { state.quotes = state.quotes.filter((q) => q.id !== control.dataset.id); saveState(); if (routeInfo().page === "quote-detail") navigate("/quotes"); else render(); showToast("Teklif silindi."); }
+  }
+  if (action === "copy-quote") {
+    const source = state.quotes.find((q) => q.id === control.dataset.id); const copy = structuredClone(source); copy.id = crypto.randomUUID(); copy.no = `${source.no}-KOPYA`; copy.date = today(); copy.validUntil = addDays(today(), state.settings.validityDays); copy.status = "draft"; state.quotes.push(copy); saveState(); render(); showToast("Teklif kopyalandı.", "success");
+  }
+  if (action === "pdf-quote") {
+    printQuoteId = control.dataset.id; render(); setTimeout(() => window.print(), 120);
+  }
+});
+
+document.addEventListener("input", (event) => {
+  const model = event.target.dataset.model;
+  if (model && quoteDraft) {
+    quoteDraft[model] = event.target.value;
+    if (model === "date" && !quoteDraft.validUntil) quoteDraft.validUntil = addDays(event.target.value, state.settings.validityDays);
+    document.querySelectorAll('[data-action="save-quote"]').forEach((button) => { button.disabled = !(quoteDraft.no.trim() && quoteDraft.customerName.trim()); });
+  }
+  if (event.target.dataset.itemIndex !== undefined && quoteDraft) {
+    const index = Number(event.target.dataset.itemIndex); const field = event.target.dataset.itemField; quoteDraft.items[index][field] = ["quantity","price","vat"].includes(field) ? Number(event.target.value) : event.target.value;
+  }
+  if (event.target.dataset.workflowIndex !== undefined && quoteDraft) quoteDraft.workflow[Number(event.target.dataset.workflowIndex)] = event.target.value;
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.dataset.action === "select-customer" && quoteDraft) {
+    const customer = state.customers.find((c) => c.id === event.target.value);
+    quoteDraft.customerId = customer?.id || "";
+    if (customer) Object.assign(quoteDraft, { customerName: customer.name, contact: customer.contact, phone: customer.phone, email: customer.email });
+    render();
+  }
+  if (event.target.dataset.action === "toggle-service") {
+    const service = state.services.find((s) => s.id === event.target.dataset.id); service.active = event.target.checked; saveState(); showToast("Hizmet durumu güncellendi.");
+  }
+});
+
+window.addEventListener("popstate", () => { quoteDraft = null; quoteTab = "info"; render(); });
+window.addEventListener("afterprint", () => { printQuoteId = null; render(); });
+
+render();
