@@ -88,6 +88,7 @@ const referenceQuote420983 = {
   ],
   description: "Çalışmaya başlanılması halinde toplam ücretin %60 ı peşin olarak talep edilip kalan %40 ise\niş bitiminde talep edilecektir. Fiyatlandırmada K.D.V.\ndahildir.",
   notes: "",
+  includeWorkflow: true,
   workflow: [
     "Ön Hazırlık, Alan Belirleme ve Ruhsat İşlemleri",
     "Koordinat ve Topografik Harita Hazırlığı",
@@ -125,6 +126,7 @@ const seedQuotes = [
   items: q.total ? [{ id: crypto.randomUUID(), name: "Jeofizik araştırma ve etüt hizmetleri", unit: "Adet", quantity: 1, price: q.total / 1.2, vat: 20 }] : [],
   description: defaultDescription,
   notes: "",
+  includeWorkflow: true,
   workflow: [...workflowDefaults],
   ...q
 }));
@@ -181,6 +183,10 @@ function loadState() {
     if (!raw) return structuredClone(initialState);
     const parsed = JSON.parse(raw);
     const merged = { ...structuredClone(initialState), ...parsed };
+    merged.quotes = (merged.quotes || []).map((quote) => ({
+      ...quote,
+      includeWorkflow: typeof quote.includeWorkflow === "boolean" ? quote.includeWorkflow : (quote.workflow || []).length > 0
+    }));
     merged.companies = (merged.companies || []).map((company) => ({
       ...company,
       logo: !company.logo || company.logo.includes("media.base44.com") ? LOGO_URL : company.logo
@@ -426,7 +432,7 @@ function newQuoteDraft(existing = null) {
   if (existing) return structuredClone(existing);
   const defaultCompany = state.companies.find((c) => c.isDefault) || state.companies[0];
   return {
-    id: crypto.randomUUID(), no: "", date: today(), validUntil: addDays(today(), state.settings.validityDays), companyId: defaultCompany?.id || "", customerId: "", customerName: "", contact: "", phone: "", email: "", projectName: "", projectPlace: "", city: "", district: "", village: "", licenseNo: "", licenseOwner: "", status: "draft", items: [], description: defaultDescription, notes: "", workflow: [...workflowDefaults], images: []
+    id: crypto.randomUUID(), no: "", date: today(), validUntil: addDays(today(), state.settings.validityDays), companyId: defaultCompany?.id || "", customerId: "", customerName: "", contact: "", phone: "", email: "", projectName: "", projectPlace: "", city: "", district: "", village: "", licenseNo: "", licenseOwner: "", status: "draft", items: [], description: defaultDescription, notes: "", includeWorkflow: false, workflow: [...workflowDefaults], images: []
   };
 }
 
@@ -508,7 +514,8 @@ function resizeQuoteImage(file) {
 
 function renderQuoteWorkflow(q) {
   const images = (q.images || []).map((image, index) => ({ image, index, src: quoteImageSource(image) })).filter((item) => item.src).slice(0, 4);
-  return `<div class="form-section"><div style="display:flex;justify-content:space-between;align-items:center"><p class="muted" style="margin:0">PDF'nin ikinci sayfasında görünecek iş akışı adımları</p><button class="ghost-btn btn-sm" data-action="add-workflow" style="color:#d99921">${icon("plus",15)} Adım Ekle</button></div><div class="workflow-table card"><table><thead><tr><th>İş Akışı No</th><th>İş Aşaması</th><th></th></tr></thead><tbody>${q.workflow.map((step,index) => `<tr><td>${index+1}</td><td><input data-workflow-index="${index}" value="${e(step)}" /></td><td><button class="icon-btn danger" data-action="remove-workflow" data-index="${index}">${icon("trash",15)}</button></td></tr>`).join("")}</tbody></table></div><div class="quote-images-head"><div><h3 class="form-section-title">İş Akışı Görselleri</h3><p>İsteğe bağlı olarak en fazla 4 görsel ekleyebilirsiniz.</p></div><label class="secondary-btn btn-sm ${images.length >= 4 ? "disabled" : ""}">${icon("plus",15)} Resim Ekle<input id="quote-images" type="file" accept="image/*" multiple ${images.length >= 4 ? "disabled" : ""} hidden /></label></div>${images.length ? `<div class="quote-image-grid count-${images.length}">${images.map(({ image, index, src }, visibleIndex) => `<figure><img src="${e(src)}" alt="İş akışı görseli ${visibleIndex + 1}"/><figcaption><span>Görsel ${visibleIndex + 1}${image?.name ? ` · ${e(image.name)}` : ""}</span><button type="button" data-action="remove-quote-image" data-index="${index}" aria-label="Görseli sil">${icon("trash",14)}</button></figcaption></figure>`).join("")}</div>` : `<div class="upload-zone"><div><strong>Henüz görsel eklenmedi</strong><span>JPG, PNG veya desteklenen bir görsel dosyası seçin.</span></div></div>`}</div>`;
+  const includeWorkflow = q.includeWorkflow !== false;
+  return `<div class="form-section"><section class="workflow-option-card ${includeWorkflow ? "active" : ""}"><div><strong>İş Akışı Sayfası</strong><span>${includeWorkflow ? "PDF'ye ayrı bir iş akışı sayfası eklenecek." : "PDF yalnızca teklif sayfasından oluşacak."}</span></div><label class="switch" aria-label="PDF'ye iş akışı sayfasını ekle"><input type="checkbox" data-action="toggle-workflow" ${includeWorkflow ? "checked" : ""}/><span class="switch-track"></span></label></section>${includeWorkflow ? `<div style="display:flex;justify-content:space-between;align-items:center"><p class="muted" style="margin:0">PDF'nin ikinci sayfasında görünecek iş akışı adımları</p><button class="ghost-btn btn-sm" data-action="add-workflow" style="color:#d99921">${icon("plus",15)} Adım Ekle</button></div><div class="workflow-table card"><table><thead><tr><th>İş Akışı No</th><th>İş Aşaması</th><th></th></tr></thead><tbody>${(q.workflow || []).map((step,index) => `<tr><td>${index+1}</td><td><input data-workflow-index="${index}" value="${e(step)}" /></td><td><button class="icon-btn danger" data-action="remove-workflow" data-index="${index}">${icon("trash",15)}</button></td></tr>`).join("") || `<tr><td colspan="3" class="empty-state">Henüz iş akışı adımı eklenmedi.</td></tr>`}</tbody></table></div><div class="quote-images-head"><div><h3 class="form-section-title">İş Akışı Görselleri</h3><p>İsteğe bağlı olarak en fazla 4 görsel ekleyebilirsiniz.</p></div><label class="secondary-btn btn-sm ${images.length >= 4 ? "disabled" : ""}">${icon("plus",15)} Resim Ekle<input id="quote-images" type="file" accept="image/*" multiple ${images.length >= 4 ? "disabled" : ""} hidden /></label></div>${images.length ? `<div class="quote-image-grid count-${images.length}">${images.map(({ image, index, src }, visibleIndex) => `<figure><img src="${e(src)}" alt="İş akışı görseli ${visibleIndex + 1}"/><figcaption><span>Görsel ${visibleIndex + 1}${image?.name ? ` · ${e(image.name)}` : ""}</span><button type="button" data-action="remove-quote-image" data-index="${index}" aria-label="Görseli sil">${icon("trash",14)}</button></figcaption></figure>`).join("")}</div>` : `<div class="upload-zone"><div><strong>Henüz görsel eklenmedi</strong><span>JPG, PNG veya desteklenen bir görsel dosyası seçin.</span></div></div>`}` : `<div class="workflow-disabled-note"><strong>İş akışı isteğe bağlıdır.</strong><span>Bu seçenek kapalıyken PDF'de iş akışı başlığı veya ikinci sayfa oluşturulmaz.</span></div>`}</div>`;
 }
 
 function renderQuoteDetail(id) {
@@ -538,8 +545,8 @@ function renderQuoteDetail(id) {
 
         <section class="quote-lines-card card"><div class="quote-section-head"><div><p>HİZMET KAPSAMI</p><h2>Hizmet Kalemleri</h2></div><span>${q.items.length} kalem</span></div><div class="table-wrap"><table class="quote-detail-table"><thead><tr><th>#</th><th>Hizmet</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>KDV</th><th>Tutar</th></tr></thead><tbody>${q.items.length ? q.items.map((item,index) => `<tr><td class="line-index">${String(index+1).padStart(2,"0")}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit)}</td><td>${Number(item.quantity)}</td><td class="nowrap">${money(item.price)}</td><td>%${Number(item.vat)}</td><td class="strong nowrap">${money(Number(item.quantity)*Number(item.price)*(1+Number(item.vat)/100))}</td></tr>`).join("") : `<tr><td colspan="7" class="empty-state">Hizmet kalemi bulunmuyor.</td></tr>`}</tbody></table></div></section>
 
-        <div class="quote-lower-grid">
-          <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>UYGULAMA PLANI</p><h2>İş Akışı</h2></div></div><ol class="quote-workflow-list">${(q.workflow || []).map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("") || `<li class="muted">İş akışı eklenmedi.</li>`}</ol></section>
+        <div class="quote-lower-grid ${q.includeWorkflow === false ? "single" : ""}">
+          ${q.includeWorkflow !== false ? `<section class="quote-content-card card"><div class="quote-section-head compact"><div><p>UYGULAMA PLANI</p><h2>İş Akışı</h2></div></div><ol class="quote-workflow-list">${(q.workflow || []).map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("") || `<li class="muted">İş akışı eklenmedi.</li>`}</ol></section>` : ""}
           <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>AÇIKLAMA</p><h2>Teklif Açıklaması</h2></div></div><div class="quote-notes-preview">${e(q.description || "Açıklama eklenmedi.")}${q.notes ? `<div class="quote-extra-note"><strong>Ek Not</strong>${e(q.notes)}</div>` : ""}</div></section>
         </div>
       </div>
@@ -578,7 +585,8 @@ function renderPdfDocument(q, extraClass = "") {
   const firstItems = items.slice(0, 6);
   const continuationChunks = [];
   for (let index = 6; index < items.length; index += 10) continuationChunks.push(items.slice(index, index + 10));
-  const pageCount = 2 + continuationChunks.length;
+  const includeWorkflow = q.includeWorkflow !== false;
+  const pageCount = 1 + continuationChunks.length + (includeWorkflow ? 1 : 0);
   const workflowCount = (q.workflow || []).length;
   const workflowDensity = workflowCount > 12 ? "compact" : workflowCount > 9 ? "dense" : "normal";
   const vatRate = Number(items[0]?.vat ?? state.settings.vatRate ?? 20);
@@ -602,14 +610,14 @@ function renderPdfDocument(q, extraClass = "") {
     <main class="pdf-page-content">
       <section class="pdf-section">${sectionTitle("MÜŞTERİ BİLGİLERİ")}<div class="pdf-customer-box"><strong>${e(q.customerName || "—")}</strong></div></section>
       <section class="pdf-section">${sectionTitle("ÇALIŞILACAK ALAN BİLGİLERİ")}<div class="pdf-area-list"><div><span>İl:</span><strong>${e(q.city || "—")}</strong></div><div><span>İlçe:</span><strong>${e(q.district || "—")}</strong></div><div><span>Ruhsat Sahibi:</span><strong>${e(q.licenseOwner || q.customerName || "—")}</strong></div></div></section>
-      <section class="pdf-section pdf-items-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ")}${itemsTable(firstItems)}${continuationChunks.length ? `<div class="pdf-continued-note">Hizmet kalemleri üçüncü sayfadan itibaren devam etmektedir.</div>` : totalsBlock()}</section>
+      <section class="pdf-section pdf-items-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ")}${itemsTable(firstItems)}${continuationChunks.length ? `<div class="pdf-continued-note">Hizmet kalemleri ${includeWorkflow ? "üçüncü" : "ikinci"} sayfadan itibaren devam etmektedir.</div>` : totalsBlock()}</section>
       <section class="pdf-section pdf-note-section">${sectionTitle("AÇIKLAMA")}<div class="pdf-note-box">${e(q.description || "—")}</div></section>
       <section class="pdf-approval"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik Hiz. ve Tek. Tic. Ltd. Şti.")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "—")}</strong><i>Kaşe / İmza</i></div></section>
     </main>${footer(1)}
   </article>`;
 
   const continuationPages = continuationChunks.map((chunk, chunkIndex) => {
-    const pageNumber = chunkIndex + 3;
+    const pageNumber = chunkIndex + (includeWorkflow ? 3 : 2);
     const isLast = chunkIndex === continuationChunks.length - 1;
     return `<article class="pdf-page pdf-continuation-page">${header(true)}<main class="pdf-page-content"><section class="pdf-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ · DEVAM")}${itemsTable(chunk, 6 + chunkIndex * 10)}${isLast ? totalsBlock() : `<div class="pdf-continued-note">Hizmet kalemleri sonraki sayfada devam etmektedir.</div>`}</section></main>${footer(pageNumber)}</article>`;
   }).join("");
@@ -620,7 +628,7 @@ function renderPdfDocument(q, extraClass = "") {
     </main>${footer(2)}
   </article>`;
 
-  return `<section class="print-sheet ${extraClass}">${firstPage}${detailsPage}${continuationPages}</section>`;
+  return `<section class="print-sheet ${extraClass}">${firstPage}${includeWorkflow ? detailsPage : ""}${continuationPages}</section>`;
 }
 
 function renderPrintSheet() {
@@ -631,7 +639,8 @@ function renderPrintSheet() {
 function renderPdfPreview() {
   if (!pdfPreviewQuote) return "";
   const extraPages = Math.max(0, Math.ceil(Math.max(0, (pdfPreviewQuote.items || []).length - 6) / 10));
-  return `<div class="pdf-preview-backdrop" role="dialog" aria-modal="true" aria-label="PDF önizleme"><section class="pdf-preview-modal"><header class="pdf-preview-toolbar"><div><p>PDF ÖNİZLEME</p><h2>${e(pdfPreviewQuote.no || "Taslak Teklif")}</h2><span>${2 + extraPages} sayfalık A4 teklif düzeni · Evren kurumsal şablonu</span></div><div class="pdf-preview-actions"><button class="secondary-btn" data-action="close-pdf-preview">Kapat</button><button class="primary-btn" data-action="download-preview-pdf">${icon("download",16)} PDF İndir / Yazdır</button></div></header><div class="pdf-preview-canvas">${renderPdfDocument(pdfPreviewQuote, "pdf-preview-sheet")}</div></section></div>`;
+  const pageCount = 1 + extraPages + (pdfPreviewQuote.includeWorkflow !== false ? 1 : 0);
+  return `<div class="pdf-preview-backdrop" role="dialog" aria-modal="true" aria-label="PDF önizleme"><section class="pdf-preview-modal"><header class="pdf-preview-toolbar"><div><p>PDF ÖNİZLEME</p><h2>${e(pdfPreviewQuote.no || "Taslak Teklif")}</h2><span>${pageCount} sayfalık A4 teklif düzeni · Evren kurumsal şablonu</span></div><div class="pdf-preview-actions"><button class="secondary-btn" data-action="close-pdf-preview">Kapat</button><button class="primary-btn" data-action="download-preview-pdf">${icon("download",16)} PDF İndir / Yazdır</button></div></header><div class="pdf-preview-canvas">${renderPdfDocument(pdfPreviewQuote, "pdf-preview-sheet")}</div></section></div>`;
 }
 
 function render() {
@@ -895,6 +904,10 @@ document.addEventListener("change", (event) => {
   }
   if (event.target.dataset.action === "toggle-service") {
     const service = state.services.find((s) => s.id === event.target.dataset.id); service.active = event.target.checked; saveState(); showToast("Hizmet durumu güncellendi.");
+  }
+  if (event.target.dataset.action === "toggle-workflow" && quoteDraft) {
+    quoteDraft.includeWorkflow = event.target.checked;
+    render();
   }
 });
 

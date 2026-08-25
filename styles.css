@@ -510,6 +510,15 @@ input::placeholder, textarea::placeholder { color: #aaa; }
 .workflow-table th { color: white; background: #30302f; }
 .workflow-table th:first-child, .workflow-table td:first-child { width: 90px; text-align: center; }
 .workflow-table td:last-child { width: 54px; }
+.workflow-option-card { min-height: 78px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 17px 19px; background: #f6f7f8; border: 1px solid var(--line); border-radius: 11px; transition: .18s; }
+.workflow-option-card.active { background: #fffaf0; border-color: #e9c47d; box-shadow: inset 4px 0 0 var(--accent); }
+.workflow-option-card > div { min-width: 0; display: grid; gap: 5px; }
+.workflow-option-card strong { color: #30302f; font-size: 14px; }
+.workflow-option-card span { color: #7d7d7a; font-size: 11px; line-height: 1.45; }
+.workflow-option-card .switch { flex: 0 0 37px; }
+.workflow-disabled-note { min-height: 132px; display: grid; place-content: center; justify-items: center; gap: 7px; padding: 24px; color: #858582; background: #fafafa; border: 1px dashed #cfcfcb; border-radius: 10px; text-align: center; }
+.workflow-disabled-note strong { color: #555552; font-size: 13px; }
+.workflow-disabled-note span { max-width: 480px; font-size: 11px; line-height: 1.55; }
 .quote-images-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-top: 22px; }
 .quote-images-head .form-section-title { margin: 0 0 5px; }
 .quote-images-head p { margin: 0; color: #8b8b8b; font-size: 11px; }
@@ -588,6 +597,7 @@ input::placeholder, textarea::placeholder { color: #aaa; }
 .quote-detail-table td:nth-child(n+3), .quote-detail-table th:nth-child(n+3) { text-align: right; }
 .quote-detail-table .line-index { color: #b67a15; font-size: 10px; font-weight: 700; }
 .quote-lower-grid { display: grid; grid-template-columns: .85fr 1.15fr; gap: 18px; }
+.quote-lower-grid.single { grid-template-columns: 1fr; }
 .quote-workflow-list { display: grid; gap: 0; margin: 0; padding: 6px 20px 18px; list-style: none; }
 .quote-workflow-list li { display: grid; grid-template-columns: 30px 1fr; align-items: center; gap: 10px; min-height: 39px; border-bottom: 1px solid var(--line-soft); }
 .quote-workflow-list li:last-child { border-bottom: 0; }
