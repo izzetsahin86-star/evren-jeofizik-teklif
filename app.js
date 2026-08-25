@@ -42,6 +42,65 @@ const seedServices = [
   ["srv-12", "Jeofizik çalışmaları DES-MT-SP (Düşey Elektrik Sondaj, Manyetotellurik ve Self Potansiyel çalışmaları)", "Adet", "Jeofizik"]
 ].map(([id, name, unit, category]) => ({ id, name, description: "", unit, category, price: 0, vat: 20, active: true }));
 
+const referenceCompany420983 = {
+  id: "company-2",
+  name: "EVREN JEOFİZİK HİZ. VE TEK. TİC. LTD. ŞTİ.",
+  subtitle: "JEOFİZİK - JEOLOJİ HİZMETLERİ",
+  logo: LOGO_URL,
+  address: "Dumlupınar Mah. Kocatepe Merkez Mah. No:2 Ordu Blv. No:4 İç Kapı No:309\nMerkez/AFYONKARAHİSAR",
+  phone: "0 532 792 79 10",
+  email: "jeofizikhizmetleri@gmail.com",
+  website: "www.evrenjeofizik.com",
+  taxOffice: "Kocatepe V.D.",
+  taxNo: "3830436033",
+  bank: "",
+  iban: "",
+  footer: "",
+  isDefault: false
+};
+
+const referenceQuote420983 = {
+  id: "q-7",
+  no: "TKL-420983",
+  date: "2026-06-09",
+  validUntil: "2026-07-09",
+  companyId: "company-2",
+  customerId: "",
+  customerName: "JEOTERMAL KAYNAK BİTKİSEL ÜRETİM AMAÇLI TARIMA DAYALI İHTİSAS OSB",
+  contact: "",
+  phone: "",
+  email: "",
+  projectName: "",
+  projectPlace: "",
+  city: "İstanbul",
+  district: "Silivri",
+  village: "",
+  licenseNo: "",
+  licenseOwner: "JEOTERMAL KAYNAK BİTKİSEL ÜRETİM AMAÇLI TARIMA DAYALI İHTİSAS OSB",
+  status: "approved",
+  items: [
+    { id: "tkl-420983-item-1", name: "Gravite Veri Toplama, İşleme, Yorumlama ve Raporlama Hizmetleri", unit: "Adet", quantity: 129, price: 3400, vat: 20 },
+    { id: "tkl-420983-item-2", name: "Manyetik Veri Toplama, İşleme, Yorumlama ve Raporlama Hizmetleri", unit: "Adet", quantity: 129, price: 3200, vat: 20 },
+    { id: "tkl-420983-item-3", name: "Toprak Gazı Ölçümleri, Analizleri ve Değerlendirme Hizmetleri", unit: "Adet", quantity: 5000, price: 500, vat: 20 },
+    { id: "tkl-420983-item-4", name: "Elektrik Rezistivite Ölçümleri, Veri Değerlendirme ve Raporlama Hizmetleri", unit: "Adet", quantity: 950, price: 20000, vat: 20 },
+    { id: "tkl-420983-item-5", name: "Manyetotellürik (MT) Ölçümleri, Veri İşleme, Modelleştirme ve Yorumlama Hizmetleri", unit: "Adet", quantity: 129, price: 20000, vat: 20 },
+    { id: "tkl-420983-item-6", name: "SP (Self Potansiyel) Ölçümleri, Veri Değerlendirme ve Raporlama Hizmetleri", unit: "Adet", quantity: 950, price: 0, vat: 20 }
+  ],
+  description: "Çalışmaya başlanılması halinde toplam ücretin %60 ı peşin olarak talep edilip kalan %40 ise\niş bitiminde talep edilecektir. Fiyatlandırmada K.D.V.\ndahildir.",
+  notes: "",
+  workflow: [
+    "Ön Hazırlık, Alan Belirleme ve Ruhsat İşlemleri",
+    "Koordinat ve Topografik Harita Hazırlığı",
+    "Jeolojik ve Hidrojeolojik Arazi Etütleri",
+    "Jeokimyasal Numune Alımı, Analizler ve Toprak Gazı Ölçümleri",
+    "Jeofizik Etütler (Veri Toplama Sahası)",
+    "Veri Entegrasyonu, 2D/3D Modelleme ve Rezervuar Değerlendirme",
+    "Sondaj Lokasyonu Seçimi ve Sondaj Aşaması (Jeotermal ve Kaynak Suyu)"
+  ],
+  images: [],
+  total: 29917680
+};
+
 const seedQuotes = [
   { id: "q-1", no: "Yyyy", date: "2026-08-22", customerName: "Ddd", projectPlace: "Hh", status: "draft", total: 0 },
   { id: "q-2", no: "EJ-2026-0004", date: "2026-07-14", customerName: "Seydişehir Belediye Başkanlığı", projectPlace: "", status: "draft", total: 1689000 },
@@ -49,7 +108,7 @@ const seedQuotes = [
   { id: "q-4", no: "EJ-2026-0003", date: "2026-08-14", customerName: "Limosa Medikal İthalat İhracat ve Ticaret Ltd.Şti.", projectPlace: "Konya", status: "draft", total: 1320000 },
   { id: "q-5", no: "TKL-211827", date: "2026-07-14", customerName: "Seydişehir Belediye Başkanlığı", projectPlace: "", status: "draft", total: 1689000 },
   { id: "q-6", no: "TKL-899131", date: "2026-06-08", customerName: "Özyapıcılar İnş.Tic.ve.San.Ltd.Şti.", projectPlace: "", status: "draft", total: 8980560 },
-  { id: "q-7", no: "TKL-420983", date: "2026-06-09", customerName: "JEOTERMAL KAYNAK BİTKİSEL ÜRETİM AMAÇLI TARIMA DAYALI İHTİSAS OSB", projectPlace: "", status: "approved", total: 29917680 }
+  referenceQuote420983
 ].map((q) => ({
   companyId: "company-1",
   customerId: "",
@@ -89,22 +148,7 @@ const initialState = {
       footer: "",
       isDefault: true
     },
-    {
-      id: "company-2",
-      name: "Evren Jeofizik Hiz. ve Tek. Tic.Ltd.Şti.",
-      subtitle: "JEOFİZİK - JEOLOJİ HİZMETLERİ",
-      logo: LOGO_URL,
-      address: "",
-      phone: "",
-      email: "",
-      website: "www.evrenjeofizik.com",
-      taxOffice: "",
-      taxNo: "",
-      bank: "",
-      iban: "",
-      footer: "",
-      isDefault: false
-    }
+    structuredClone(referenceCompany420983)
   ],
   customers: [
     {
@@ -141,6 +185,14 @@ function loadState() {
       ...company,
       logo: !company.logo || company.logo.includes("media.base44.com") ? LOGO_URL : company.logo
     }));
+    const storedReference = (merged.quotes || []).find((quote) => quote.no === referenceQuote420983.no);
+    const hasGenericReferenceData = storedReference?.items?.length === 1
+      && storedReference.items[0]?.name === "Jeofizik araştırma ve etüt hizmetleri";
+    if (hasGenericReferenceData) Object.assign(storedReference, structuredClone(referenceQuote420983));
+    const storedReferenceCompany = merged.companies.find((company) => company.id === referenceCompany420983.id);
+    if (storedReferenceCompany && !storedReferenceCompany.address && !storedReferenceCompany.phone && !storedReferenceCompany.taxNo) {
+      Object.assign(storedReferenceCompany, structuredClone(referenceCompany420983));
+    }
     return merged;
   } catch {
     return structuredClone(initialState);
@@ -536,52 +588,50 @@ function renderPdfDocument(q, extraClass = "") {
   const items = Array.isArray(q.items) ? q.items : [];
   const totals = calcTotals(items);
   const validityDays = pdfValidityDays(q);
-  const companyContact = [company?.phone, company?.email, company?.website].filter(Boolean).join("  |  ");
+  const companyContact = [company?.phone && `Tel: ${company.phone}`, company?.email && `E-posta: ${company.email}`].filter(Boolean).join("  |  ");
+  const footerContact = [company?.email, company?.phone].filter(Boolean).join("  |  ");
   const companyLegal = [company?.taxOffice && `Vergi Dairesi: ${company.taxOffice}`, company?.taxNo && `Vergi No: ${company.taxNo}`].filter(Boolean).join("  |  ");
   const firstItems = items.slice(0, 6);
   const continuationChunks = [];
   for (let index = 6; index < items.length; index += 10) continuationChunks.push(items.slice(index, index + 10));
   const pageCount = 2 + continuationChunks.length;
-  const conditions = pdfConditionItems(q.description);
-  const pdfImages = (q.images || []).map(quoteImageSource).filter(Boolean).slice(0, 4);
   const workflowCount = (q.workflow || []).length;
   const workflowDensity = workflowCount > 12 ? "compact" : workflowCount > 9 ? "dense" : "normal";
+  const vatRate = Number(items[0]?.vat ?? state.settings.vatRate ?? 20);
 
-  const header = () => `<header class="pdf-header">
-    <div class="pdf-brand"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><strong>${e(company?.subtitle || "JEOFİZİK · JEOLOJİ HİZMETLERİ")}</strong>${company?.address ? `<p>${e(company.address)}</p>` : ""}${companyContact ? `<p>${e(companyContact)}</p>` : ""}${companyLegal ? `<p>${e(companyLegal)}</p>` : ""}</div></div>
-    <div class="pdf-document-card"><h2>TEKLİF FORMU</h2><dl><div><dt>Teklif No</dt><dd>${e(q.no || "TASLAK")}</dd></div><div><dt>Tarih</dt><dd>${formatDate(q.date)}</dd></div><div><dt>Geçerlilik</dt><dd>${validityDays} gün</dd></div></dl></div>
+  const header = (compact = false) => `<header class="pdf-header ${compact ? "compact" : ""}">
+    <div class="pdf-brand"><img src="${e(company?.logo || LOGO_URL)}" alt="Logo"/><div><h1>${e(company?.name || "EVREN JEOFİZİK")}</h1><strong>${e(company?.subtitle || "JEOFİZİK - JEOLOJİ HİZMETLERİ")}</strong>${!compact && company?.address ? `<p class="pdf-address">${e(company.address)}</p>` : ""}${!compact && companyContact ? `<p>${e(companyContact)}</p>` : ""}${!compact && companyLegal ? `<p>${e(companyLegal)}</p>` : ""}</div></div>
+    <div class="pdf-document-card ${compact ? "compact" : ""}"><h2>TEKLİF FORMU</h2>${compact ? `<strong class="pdf-compact-quote-no">${e(q.no || "TASLAK")}</strong>` : `<dl><div><dt>Teklif No</dt><dd>${e(q.no || "TASLAK")}</dd></div><div><dt>Tarih</dt><dd>${e(q.date || "—")}</dd></div><div><dt>Geçerlilik</dt><dd>${validityDays} gün</dd></div></dl>`}</div>
   </header><div class="pdf-gold-rule"></div>`;
 
-  const footer = (pageNumber) => `<footer class="pdf-footer"><span class="pdf-page-number">Sayfa ${pageNumber} / ${pageCount}</span><div><strong>${e(company?.name || "EVREN JEOFİZİK")}</strong><span>${e(companyContact || company?.footer || "Jeofizik · Jeoloji Hizmetleri")}</span><b>Bu teklif ${validityDays} gün süreyle geçerlidir.</b></div></footer>`;
+  const footer = (pageNumber) => `<footer class="pdf-footer"><span class="pdf-page-number">Sayfa ${pageNumber} / ${pageCount}</span><div><strong>EVREN JEOFİZİK</strong><span>${e(footerContact || company?.footer || "Jeofizik - Jeoloji Hizmetleri")}</span><b>Bu teklif ${validityDays} gün süreyle geçerlidir.</b></div></footer>`;
 
   const sectionTitle = (title) => `<div class="pdf-section-title"><i></i><h2>${title}</h2></div>`;
 
   const itemRows = (pageItems, startIndex = 0) => pageItems.map((item, index) => `<tr><td>${startIndex + index + 1}</td><td><strong>${e(item.name)}</strong></td><td>${e(item.unit || "—")}</td><td>${Number(item.quantity || 0)}</td><td>${money(item.price).replace("—", "0,00 TL")}</td><td><strong>${money(Number(item.quantity || 0) * Number(item.price || 0)).replace("—", "0,00 TL")}</strong></td></tr>`).join("") || `<tr><td colspan="6" class="pdf-empty-row">Hizmet kalemi bulunmuyor.</td></tr>`;
 
-  const itemsTable = (pageItems, startIndex = 0) => `<table class="pdf-items-table"><thead><tr><th>#</th><th>Açıklama</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>Tutar</th></tr></thead><tbody>${itemRows(pageItems, startIndex)}</tbody></table>`;
+  const itemsTable = (pageItems, startIndex = 0) => `<table class="pdf-items-table"><thead><tr><th>#</th><th>Açıklama</th><th>Birim</th><th>Miktar</th><th>Birim Fiyat</th><th>Toplam</th></tr></thead><tbody>${itemRows(pageItems, startIndex)}</tbody></table>`;
 
-  const totalsBlock = () => `<div class="pdf-totals"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—", "0,00 TL")}</strong></div><div><span>KDV Toplamı</span><strong>${money(totals.vat).replace("—", "0,00 TL")}</strong></div><div class="pdf-grand-total"><span>GENEL TOPLAM</span><strong>${money(q.total || totals.total).replace("—", "0,00 TL")}</strong></div></div>`;
+  const totalsBlock = () => `<div class="pdf-totals"><div><span>Ara Toplam</span><strong>${money(totals.subtotal).replace("—", "0,00 TL")}</strong></div><div><span>KDV (%${vatRate})</span><strong>${money(totals.vat).replace("—", "0,00 TL")}</strong></div><div class="pdf-grand-total"><span>GENEL<br/>TOPLAM</span><strong>${money(q.total || totals.total).replace("—", "0,00 TL")}</strong></div></div>`;
 
   const firstPage = `<article class="pdf-page pdf-primary-page">${header()}
     <main class="pdf-page-content">
-      <section class="pdf-section">${sectionTitle("MÜŞTERİ BİLGİLERİ")}<div class="pdf-customer-box"><strong>${e(q.customerName || "—")}</strong>${q.contact || q.phone || q.email ? `<p>${[q.contact, q.phone, q.email].filter(Boolean).map(e).join("  |  ")}</p>` : ""}${q.projectName ? `<small>${e(q.projectName)}</small>` : ""}</div></section>
-      <section class="pdf-section">${sectionTitle("ÇALIŞILACAK ALAN BİLGİLERİ")}<div class="pdf-area-grid"><div><span>İl</span><strong>${e(q.city || "—")}</strong></div><div><span>İlçe</span><strong>${e(q.district || "—")}</strong></div><div><span>Mahalle / Köy</span><strong>${e(q.village || q.projectPlace || "—")}</strong></div><div><span>Ruhsat No</span><strong>${e(q.licenseNo || "—")}</strong></div><div class="wide"><span>Ruhsat Sahibi</span><strong>${e(q.licenseOwner || q.customerName || "—")}</strong></div></div></section>
+      <section class="pdf-section">${sectionTitle("MÜŞTERİ BİLGİLERİ")}<div class="pdf-customer-box"><strong>${e(q.customerName || "—")}</strong></div></section>
+      <section class="pdf-section">${sectionTitle("ÇALIŞILACAK ALAN BİLGİLERİ")}<div class="pdf-area-list"><div><span>İl:</span><strong>${e(q.city || "—")}</strong></div><div><span>İlçe:</span><strong>${e(q.district || "—")}</strong></div><div><span>Ruhsat Sahibi:</span><strong>${e(q.licenseOwner || q.customerName || "—")}</strong></div></div></section>
       <section class="pdf-section pdf-items-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ")}${itemsTable(firstItems)}${continuationChunks.length ? `<div class="pdf-continued-note">Hizmet kalemleri üçüncü sayfadan itibaren devam etmektedir.</div>` : totalsBlock()}</section>
-      <section class="pdf-section pdf-conditions-section">${sectionTitle("TEKLİF KOŞULLARI")}<div class="pdf-conditions-grid">${conditions.map((condition, index) => `<article><span>${String(index + 1).padStart(2, "0")}</span><div><strong>${e(condition.title)}</strong><p>${e(condition.text)}</p></div></article>`).join("")}</div>${q.notes ? `<div class="pdf-extra-note"><strong>EK NOT</strong><span>${e(q.notes)}</span></div>` : ""}</section>
-      <section class="pdf-approval"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "")}</strong><i>Kaşe / İmza</i></div></section>
+      <section class="pdf-section pdf-note-section">${sectionTitle("AÇIKLAMA")}<div class="pdf-note-box">${e(q.description || "—")}</div></section>
     </main>${footer(1)}
   </article>`;
 
   const continuationPages = continuationChunks.map((chunk, chunkIndex) => {
     const pageNumber = chunkIndex + 3;
     const isLast = chunkIndex === continuationChunks.length - 1;
-    return `<article class="pdf-page pdf-continuation-page">${header()}<main class="pdf-page-content"><section class="pdf-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ · DEVAM")}${itemsTable(chunk, 6 + chunkIndex * 10)}${isLast ? totalsBlock() : `<div class="pdf-continued-note">Hizmet kalemleri sonraki sayfada devam etmektedir.</div>`}</section></main>${footer(pageNumber)}</article>`;
+    return `<article class="pdf-page pdf-continuation-page">${header(true)}<main class="pdf-page-content"><section class="pdf-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ · DEVAM")}${itemsTable(chunk, 6 + chunkIndex * 10)}${isLast ? totalsBlock() : `<div class="pdf-continued-note">Hizmet kalemleri sonraki sayfada devam etmektedir.</div>`}</section></main>${footer(pageNumber)}</article>`;
   }).join("");
 
-  const detailsPage = `<article class="pdf-page pdf-secondary-page">${header()}
+  const detailsPage = `<article class="pdf-page pdf-secondary-page">${header(true)}
     <main class="pdf-page-content">
       <section class="pdf-section pdf-workflow-section ${workflowDensity}">${sectionTitle("İŞ AKIŞI")}<table class="pdf-workflow-table"><thead><tr><th>İş Akışı No</th><th>İş Aşaması</th></tr></thead><tbody>${(q.workflow || []).map((step, index) => `<tr><td>${index + 1}</td><td>${e(step)}</td></tr>`).join("") || `<tr><td colspan="2" class="pdf-empty-row">İş akışı belirtilmemiştir.</td></tr>`}</tbody></table></section>
-      ${pdfImages.length ? `<section class="pdf-section pdf-images-section">${sectionTitle("İŞ AKIŞI GÖRSELLERİ")}<div class="pdf-media-grid count-${pdfImages.length}">${pdfImages.map((src, index) => `<figure class="pdf-media-item"><img src="${e(src)}" alt="İş akışı görseli ${index + 1}"/><span>${String(index + 1).padStart(2, "0")}</span></figure>`).join("")}</div></section>` : ""}
     </main>${footer(2)}
   </article>`;
 
