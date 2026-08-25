@@ -725,30 +725,20 @@ input::placeholder, textarea::placeholder { color: #aaa; }
 .pdf-note-section { margin-top: 0; margin-bottom: 0; }
 .pdf-note-box { min-height: 19.8mm; padding: 3.5mm 62mm 3.5mm 4.4mm; color: #555552; background: #fbfbfa; border: .25mm solid #e2e2df; font-size: 9.5px; line-height: 1.55; white-space: pre-line; }
 
+.pdf-primary-page .pdf-items-table td { height: 10.2mm; }
+.pdf-primary-page .pdf-totals { margin-top: 4.2mm; }
+.pdf-approval { min-height: 15mm; display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; margin-top: 2mm; }
+.pdf-approval > div { min-width: 0; min-height: 15mm; display: grid; grid-template-rows: auto 1fr auto; padding: 2mm 2.7mm 1.6mm; background: #fbfbfa; border: .25mm solid #dededb; border-top: .8mm solid #3b3b3a; }
+.pdf-approval span { color: #9d680c; font-size: 7.2px; font-weight: 800; letter-spacing: .08em; }
+.pdf-approval strong { align-self: center; overflow: hidden; font-size: 7.2px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-approval i { color: #999995; font-size: 6.3px; font-style: normal; text-align: right; }
+
 .pdf-workflow-table th:first-child { width: 27mm; text-align: center; }
 .pdf-workflow-table th:last-child { text-align: center; }
 .pdf-workflow-table th { height: 9.7mm; }
 .pdf-workflow-table td { height: 9.9mm; padding: 2mm 3mm; color: #363634; border-right: .25mm solid #dededb; border-bottom: .25mm solid #dededb; font-size: 11px; line-height: 1.35; }
 .pdf-workflow-table td:first-child { text-align: center; }
 .pdf-workflow-table td:last-child { border-right: 0; text-align: center; }
-
-.pdf-conditions-section { margin-top: 2mm; }
-.pdf-conditions-grid { display: grid; grid-template-columns: repeat(3,1fr); border: .25mm solid #e2e2df; border-top: 0; }
-.pdf-conditions-grid article { min-height: 13.5mm; display: grid; grid-template-columns: 6.5mm 1fr; gap: 1.6mm; padding: 1.8mm 2mm; border-right: .25mm solid #e2e2df; border-bottom: .25mm solid #e2e2df; }
-.pdf-conditions-grid article:nth-child(3n) { border-right: 0; }
-.pdf-conditions-grid article:nth-last-child(-n+3) { border-bottom: 0; }
-.pdf-conditions-grid article > span { width: 5mm; height: 5mm; display: grid; place-items: center; color: #fff; background: #3b3b3a; border-left: .8mm solid #f4a61f; font-size: 5.2px; font-weight: 800; }
-.pdf-conditions-grid article strong { display: block; margin-bottom: .7mm; color: #2c2c2a; font-size: 5.45px; letter-spacing: .025em; }
-.pdf-conditions-grid article p { margin: 0; color: #686865; font-size: 5.2px; line-height: 1.27; }
-.pdf-extra-note { display: grid; grid-template-columns: auto 1fr; gap: 2mm; margin-top: 1.5mm; padding: 1.7mm 2mm; color: #71500f; background: #fff7e8; border-left: 1mm solid #f4a61f; font-size: 5.7px; line-height: 1.3; }
-.pdf-extra-note strong { color: #9b650c; letter-spacing: .08em; }
-
-.pdf-approval { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; margin-top: 2.4mm; }
-.pdf-approval > div { min-height: 15mm; padding: 2mm 2.5mm; border: .25mm solid #dededb; border-top: .8mm solid #3b3b3a; }
-.pdf-approval span, .pdf-approval strong, .pdf-approval i { display: block; }
-.pdf-approval span { color: #9d680c; font-size: 5.7px; font-weight: 750; letter-spacing: .08em; }
-.pdf-approval strong { margin-top: 1mm; font-size: 6.1px; }
-.pdf-approval i { margin-top: 3mm; color: #aaa; font-size: 5.2px; font-style: normal; text-align: right; }
 
 .pdf-secondary-page { padding-top: 8.3mm; border-top: 1mm solid #f4a61f; }
 .pdf-secondary-page .pdf-page-content { min-height: 0; display: block; }
@@ -772,7 +762,7 @@ input::placeholder, textarea::placeholder { color: #aaa; }
 .pdf-footer strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .pdf-footer span { font-size: 9px; text-align: center; }
 .pdf-footer b { font-size: 8.5px; text-align: right; }
-.pdf-section, .pdf-customer-box, .pdf-area-grid, .pdf-area-list, .pdf-totals, .pdf-conditions-grid, .pdf-approval { break-inside: avoid; page-break-inside: avoid; }
+.pdf-section, .pdf-customer-box, .pdf-area-grid, .pdf-area-list, .pdf-totals, .pdf-approval { break-inside: avoid; page-break-inside: avoid; }
 
 @media (max-width: 1120px) {
   .metrics-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }

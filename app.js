@@ -470,7 +470,7 @@ function renderQuoteItems(q) {
 }
 
 function renderQuoteNotes(q) {
-  return `<div class="form-section"><h3 class="form-section-title">Açıklama</h3><textarea data-model="description" style="min-height:220px" placeholder="Teklif ile ilgili açıklamalar...">${e(q.description)}</textarea><h3 class="form-section-title">Notlar</h3><textarea data-model="notes" placeholder="Ek notlar...">${e(q.notes)}</textarea></div>`;
+  return `<div class="form-section"><h3 class="form-section-title">Açıklama</h3><p class="muted" style="margin:-8px 0 12px">Buraya yazdığınız metin PDF'de AÇIKLAMA başlığı altında görünür.</p><textarea data-model="description" style="min-height:220px" placeholder="PDF'de görünecek açıklamayı yazın...">${e(q.description)}</textarea><h3 class="form-section-title">Notlar</h3><textarea data-model="notes" placeholder="Sistem içi ek notlar...">${e(q.notes)}</textarea></div>`;
 }
 
 function quoteImageSource(image) {
@@ -540,7 +540,7 @@ function renderQuoteDetail(id) {
 
         <div class="quote-lower-grid">
           <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>UYGULAMA PLANI</p><h2>İş Akışı</h2></div></div><ol class="quote-workflow-list">${(q.workflow || []).map((step,index) => `<li><span>${String(index+1).padStart(2,"0")}</span><p>${e(step)}</p></li>`).join("") || `<li class="muted">İş akışı eklenmedi.</li>`}</ol></section>
-          <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>TEKLİF KOŞULLARI</p><h2>Açıklama ve Notlar</h2></div></div><div class="quote-notes-preview">${e(q.description || "Açıklama eklenmedi.")}${q.notes ? `<div class="quote-extra-note"><strong>Ek Not</strong>${e(q.notes)}</div>` : ""}</div></section>
+          <section class="quote-content-card card"><div class="quote-section-head compact"><div><p>AÇIKLAMA</p><h2>Teklif Açıklaması</h2></div></div><div class="quote-notes-preview">${e(q.description || "Açıklama eklenmedi.")}${q.notes ? `<div class="quote-extra-note"><strong>Ek Not</strong>${e(q.notes)}</div>` : ""}</div></section>
         </div>
       </div>
 
@@ -556,22 +556,6 @@ function renderQuoteDetail(id) {
       </aside>
     </div>
   </div>`, "quotes");
-}
-
-function pdfConditionItems(description) {
-  const sections = String(description || "")
-    .split(/\n\s*\n/)
-    .map((section) => section.trim())
-    .filter(Boolean);
-  if (!sections.length) return [{ title: "TEKLİF KOŞULLARI", text: "Teklif koşulları belirtilmemiştir." }];
-  return sections.map((section, index) => {
-    const clean = section.replace(/^\d+\.\s*/, "");
-    const separator = clean.indexOf(":");
-    if (separator > 0 && separator < 48) {
-      return { title: clean.slice(0, separator).trim(), text: clean.slice(separator + 1).trim() };
-    }
-    return { title: `KOŞUL ${String(index + 1).padStart(2, "0")}`, text: clean };
-  });
 }
 
 function pdfValidityDays(q) {
@@ -620,6 +604,7 @@ function renderPdfDocument(q, extraClass = "") {
       <section class="pdf-section">${sectionTitle("ÇALIŞILACAK ALAN BİLGİLERİ")}<div class="pdf-area-list"><div><span>İl:</span><strong>${e(q.city || "—")}</strong></div><div><span>İlçe:</span><strong>${e(q.district || "—")}</strong></div><div><span>Ruhsat Sahibi:</span><strong>${e(q.licenseOwner || q.customerName || "—")}</strong></div></div></section>
       <section class="pdf-section pdf-items-section">${sectionTitle("HİZMET / ÜRÜN KALEMLERİ")}${itemsTable(firstItems)}${continuationChunks.length ? `<div class="pdf-continued-note">Hizmet kalemleri üçüncü sayfadan itibaren devam etmektedir.</div>` : totalsBlock()}</section>
       <section class="pdf-section pdf-note-section">${sectionTitle("AÇIKLAMA")}<div class="pdf-note-box">${e(q.description || "—")}</div></section>
+      <section class="pdf-approval"><div><span>TEKLİFİ HAZIRLAYAN</span><strong>${e(company?.name || "Evren Jeofizik Hiz. ve Tek. Tic. Ltd. Şti.")}</strong><i>Kaşe / İmza</i></div><div><span>MÜŞTERİ ONAYI</span><strong>${e(q.customerName || "—")}</strong><i>Kaşe / İmza</i></div></section>
     </main>${footer(1)}
   </article>`;
 
