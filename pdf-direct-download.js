@@ -24,6 +24,51 @@
     });
   }
 
+  async function ensurePdfImagesReady(sheet) {
+    const logoImages = [...sheet.querySelectorAll(".pdf-brand img")];
+    logoImages.forEach((img) => {
+      if (!img.getAttribute("src") || (img.complete && img.naturalWidth === 0)) {
+        img.src = "/evren-logo.png";
+      }
+      img.crossOrigin = "anonymous";
+    });
+
+    const images = [...sheet.querySelectorAll("img")];
+    await Promise.all(images.map((img) => new Promise((resolve) => {
+      if (img.complete && img.naturalWidth > 0) {
+        if (typeof img.decode === "function") img.decode().catch(() => {}).finally(resolve);
+        else resolve();
+        return;
+      }
+
+      const timer = setTimeout(() => {
+        if (img.matches(".pdf-brand img") && (!img.complete || img.naturalWidth === 0)) {
+          img.src = "/evren-logo.png";
+        }
+        resolve();
+      }, 4000);
+
+      img.addEventListener("load", () => {
+        clearTimeout(timer);
+        if (typeof img.decode === "function") img.decode().catch(() => {}).finally(resolve);
+        else resolve();
+      }, { once: true });
+
+      img.addEventListener("error", () => {
+        clearTimeout(timer);
+        if (img.matches(".pdf-brand img") && !img.src.endsWith("/evren-logo.png")) {
+          img.src = "/evren-logo.png";
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        } else {
+          resolve();
+        }
+      }, { once: true });
+    })));
+
+    await sleepFrame();
+  }
+
   function safeFileName(value) {
     const name = String(value || "Evren Jeofizik Teklif")
       .trim()
@@ -82,7 +127,6 @@
     const blob = pdf.output("blob");
     const file = new File([blob], fileName, { type: "application/pdf", lastModified: Date.now() });
 
-    // iPhone/iPad keeps the native share flow so “Dosyalara Kaydet” remains available.
     if (isIOSDevice() && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
@@ -93,7 +137,6 @@
       }
     }
 
-    // Desktop: always download the generated PDF directly.
     directDownload(blob, fileName);
   }
 
@@ -119,6 +162,8 @@
       const sheet = modal?.querySelector(".pdf-preview-sheet");
       const pages = sheet ? [...sheet.querySelectorAll(":scope > .pdf-page")] : [];
       if (!pages.length) throw new Error("PDF sayfaları bulunamadı.");
+
+      await ensurePdfImagesReady(sheet);
 
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({
@@ -189,7 +234,6 @@
   style.textContent = "@keyframes pdf-direct-spin{to{transform:rotate(360deg)}}";
   document.head.appendChild(style);
 
-  // These action names are intentionally unknown to app.js, so window.print() cannot run.
   document.addEventListener("click", (event) => {
     const control = event.target.closest('[data-action="export-preview-pdf"], [data-action="export-pdf"]');
     if (!control) return;
