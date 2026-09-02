@@ -5,7 +5,7 @@
     return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
 
-  function waitFor(selector, timeout = 2500) {
+  function waitFor(selector, timeout = 3000) {
     return new Promise((resolve, reject) => {
       const existing = document.querySelector(selector);
       if (existing) return resolve(existing);
@@ -34,15 +34,24 @@
     return `${name || "Evren-Jeofizik-Teklif"}.pdf`;
   }
 
-  function updateButtonLabels() {
+  function setButtonText(button, text) {
+    const svg = button.querySelector("svg")?.outerHTML || "";
+    button.innerHTML = `${svg}${svg ? " " : ""}${text}`;
+  }
+
+  function rewriteButtons() {
+    document.querySelectorAll('[data-action="pdf-quote"]').forEach((button) => {
+      button.dataset.action = "export-pdf";
+      setButtonText(button, "PDF Dışa Aktar");
+      button.setAttribute("aria-label", "PDF Dışa Aktar");
+      button.setAttribute("title", "PDF Dışa Aktar");
+    });
+
     document.querySelectorAll('[data-action="download-preview-pdf"]').forEach((button) => {
-      [...button.childNodes].forEach((node) => {
-        if (node.nodeType === Node.TEXT_NODE && node.nodeValue?.includes("PDF İndir / Yazdır")) {
-          node.nodeValue = node.nodeValue.replace("PDF İndir / Yazdır", "PDF İndir");
-        }
-      });
-      button.setAttribute("aria-label", "PDF İndir");
-      button.setAttribute("title", "PDF İndir");
+      button.dataset.action = "export-preview-pdf";
+      setButtonText(button, "PDF Dışa Aktar");
+      button.setAttribute("aria-label", "PDF Dışa Aktar");
+      button.setAttribute("title", "PDF Dışa Aktar");
     });
   }
 
@@ -50,36 +59,37 @@
     return typeof window.html2canvas === "function" && Boolean(window.jspdf?.jsPDF);
   }
 
-  async function deliverPdf(pdf, title) {
+  async function exportPdfFile(pdf, title) {
     const fileName = safeFileName(title);
     const blob = pdf.output("blob");
+    const file = new File([blob], fileName, { type: "application/pdf", lastModified: Date.now() });
 
-    // iPhone/iPad: native share sheet includes “Dosyalara Kaydet”.
-    try {
-      const file = new File([blob], fileName, { type: "application/pdf" });
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: fileName,
-          text: "Evren Jeofizik teklif PDF dosyası"
-        });
+    // iPhone/iPad: share ONLY the actual PDF file. No URL, title or text is sent.
+    // This makes iOS show the real PDF attachment and “Dosyalara Kaydet”.
+    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
         return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+        console.warn("PDF dosya paylaşımı başarısız, PDF görüntüleyici açılıyor.", error);
       }
-    } catch (error) {
-      if (error?.name === "AbortError") return;
-      console.warn("Yerel paylaşım kullanılamadı, doğrudan indirmeye geçiliyor.", error);
     }
 
-    // Desktop / fallback: real PDF download, never window.print().
+    // Safe fallback: open the generated PDF itself, never the quote webpage.
+    // From the PDF viewer the user can use Share > Dosyalara Kaydet.
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = fileName;
-    anchor.rel = "noopener";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    const opened = window.open(url, "_blank", "noopener,noreferrer");
+    if (!opened) {
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = fileName;
+      anchor.rel = "noopener";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
   }
 
   async function createPdf(button) {
@@ -87,17 +97,18 @@
     busy = true;
 
     const originalDisabled = button.disabled;
-    const originalText = button.innerHTML;
+    const originalHtml = button.innerHTML;
 
     try {
       button.disabled = true;
       button.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pdf-direct-spin .7s linear infinite"></span> PDF hazırlanıyor...';
 
       if (!librariesReady()) {
-        throw new Error("PDF oluşturma bileşenleri yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin.");
+        throw new Error("PDF oluşturma bileşenleri yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
       }
 
       await sleepFrame();
+      rewriteButtons();
 
       const modal = button.closest(".pdf-preview-modal") || document.querySelector(".pdf-preview-modal");
       const sheet = modal?.querySelector(".pdf-preview-sheet");
@@ -139,18 +150,19 @@
         creator: "Evren Jeofizik Teklif Sistemi"
       });
 
-      await deliverPdf(pdf, title);
+      await exportPdfFile(pdf, title);
     } catch (error) {
-      console.error("PDF oluşturulamadı:", error);
-      window.alert(error?.message || "PDF oluşturulamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
+      console.error("PDF dışa aktarılamadı:", error);
+      window.alert(error?.message || "PDF dışa aktarılamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
     } finally {
       button.disabled = originalDisabled;
-      button.innerHTML = originalText.replace("PDF İndir / Yazdır", "PDF İndir");
+      button.innerHTML = originalHtml;
+      rewriteButtons();
       busy = false;
     }
   }
 
-  async function downloadFromQuoteDetail(control) {
+  async function exportFromQuoteDetail(control) {
     const id = control.dataset.id;
     const previewButton = document.querySelector(`[data-action="preview-pdf"][data-id="${CSS.escape(id || "")}"]`)
       || document.querySelector('[data-action="preview-pdf"]');
@@ -159,28 +171,29 @@
     previewButton.click();
     const modal = await waitFor(".pdf-preview-modal");
     await sleepFrame();
-    const downloadButton = modal.querySelector('[data-action="download-preview-pdf"]');
-    if (!downloadButton) throw new Error("PDF indirme butonu bulunamadı.");
-    await createPdf(downloadButton);
+    rewriteButtons();
+    const exportButton = modal.querySelector('[data-action="export-preview-pdf"]');
+    if (!exportButton) throw new Error("PDF dışa aktarma butonu bulunamadı.");
+    await createPdf(exportButton);
   }
 
   const style = document.createElement("style");
   style.textContent = "@keyframes pdf-direct-spin{to{transform:rotate(360deg)}}";
   document.head.appendChild(style);
 
-  // Capture phase prevents app.js from reaching window.print().
+  // These action names are intentionally unknown to app.js, so window.print() cannot run.
   document.addEventListener("click", (event) => {
-    const control = event.target.closest('[data-action="download-preview-pdf"], [data-action="pdf-quote"]');
+    const control = event.target.closest('[data-action="export-preview-pdf"], [data-action="export-pdf"]');
     if (!control) return;
 
     event.preventDefault();
     event.stopPropagation();
     event.stopImmediatePropagation();
 
-    if (control.dataset.action === "pdf-quote") {
-      downloadFromQuoteDetail(control).catch((error) => {
+    if (control.dataset.action === "export-pdf") {
+      exportFromQuoteDetail(control).catch((error) => {
         console.error(error);
-        window.alert(error?.message || "PDF oluşturulamadı.");
+        window.alert(error?.message || "PDF dışa aktarılamadı.");
       });
       return;
     }
@@ -188,12 +201,12 @@
     createPdf(control);
   }, true);
 
-  const observer = new MutationObserver(updateButtonLabels);
+  const observer = new MutationObserver(rewriteButtons);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", updateButtonLabels, { once: true });
+    document.addEventListener("DOMContentLoaded", rewriteButtons, { once: true });
   } else {
-    updateButtonLabels();
+    rewriteButtons();
   }
 })();
