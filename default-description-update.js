@@ -1,5 +1,6 @@
 (() => {
   const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+  const CLOUD_REVISION_KEY = "evren-cloud-sync-revision";
 
   const OLD_TEXT = `1. TEKLİF GEÇERLİLİK SÜRESİ: Bu teklif belirtilen geçerlilik tarihine kadar geçerlidir.
 
@@ -51,7 +52,12 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   }
 
-  migrateStoredQuotes();
+  // Merkezi senkron bir revizyona ulaştıktan sonra depolanmış veriyi sayfa açılışında
+  // yeniden yazmak, merkezden gelen aynı revizyonla sürekli reload döngüsü oluşturabiliyor.
+  // Bu nedenle migration yalnızca cihaz henüz merkezi revizyon almamışken çalışır.
+  if (Number(sessionStorage.getItem(CLOUD_REVISION_KEY) || 0) === 0) {
+    migrateStoredQuotes();
+  }
 
   new MutationObserver(updateVisibleDescription).observe(document.documentElement, {
     childList: true,
