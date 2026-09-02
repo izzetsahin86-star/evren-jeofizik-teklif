@@ -1,4 +1,8 @@
 (() => {
+  const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (isMobileDevice) return;
+
   const STORAGE_KEY = "evren-jeofizik-teklif-v1";
   const AUTH_KEY = "evren-jeofizik-auth";
   const REVISION_KEY = "evren-cloud-sync-revision";
