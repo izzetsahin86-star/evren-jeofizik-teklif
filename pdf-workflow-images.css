@@ -1,13 +1,15 @@
 .pdf-workflow-images {
-  margin-top: 3mm;
+  min-height: 0;
+  margin-top: 2mm;
+  overflow: hidden;
 }
 
 .pdf-workflow-images-title {
-  height: 6.6mm;
+  height: 5.8mm;
   display: flex;
   align-items: center;
   gap: 2.5mm;
-  margin-bottom: 2mm;
+  margin-bottom: 1.5mm;
   padding: 0 3mm;
   color: #fff;
   background: #3b3b3a;
@@ -15,38 +17,36 @@
 
 .pdf-workflow-images-title i {
   width: 1mm;
-  height: 4.2mm;
+  height: 4mm;
   flex: 0 0 1mm;
   background: #f4a61f;
 }
 
 .pdf-workflow-images-title span {
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 700;
   letter-spacing: .07em;
 }
 
 .pdf-workflow-image-grid {
+  min-height: 0;
   display: grid;
   gap: 2mm;
-  height: 58mm;
+  overflow: hidden;
 }
 
 .pdf-workflow-images.count-1 .pdf-workflow-image-grid {
   grid-template-columns: 1fr;
-  height: 62mm;
 }
 
 .pdf-workflow-images.count-2 .pdf-workflow-image-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  height: 52mm;
 }
 
 .pdf-workflow-images.count-3 .pdf-workflow-image-grid,
 .pdf-workflow-images.count-4 .pdf-workflow-image-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  height: 58mm;
 }
 
 .pdf-workflow-image-grid figure {
@@ -56,39 +56,73 @@
   place-items: center;
   margin: 0;
   overflow: hidden;
-  background: #f7f7f5;
+  background: #fff;
   border: .25mm solid #dededb;
 }
 
 .pdf-workflow-image-grid img {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   display: block;
-  object-fit: contain;
+  object-fit: contain !important;
+  object-position: center center;
 }
 
-.pdf-workflow-images-dense .pdf-workflow-images {
-  margin-top: 2.2mm;
+/* Görsel olduğunda iş akışı tablosu sayfada daha verimli yer kaplar. */
+.pdf-secondary-page.pdf-workflow-has-images .pdf-workflow-section {
+  margin-bottom: 1.8mm;
 }
 
-.pdf-workflow-images-dense .pdf-workflow-image-grid {
-  height: 46mm;
+.pdf-secondary-page.pdf-workflow-has-images .pdf-workflow-section .pdf-section-title {
+  height: 6.8mm;
+  margin-bottom: 1.4mm;
 }
 
-.pdf-workflow-images-dense .pdf-workflow-images.count-1 .pdf-workflow-image-grid {
-  height: 50mm;
+.pdf-secondary-page.pdf-workflow-has-images .pdf-workflow-table th {
+  height: 6.6mm;
+  padding: 1.2mm 2.2mm;
+  font-size: 7.2px;
 }
 
-.pdf-workflow-images-tight .pdf-workflow-images {
-  margin-top: 1.8mm;
+.pdf-secondary-page.pdf-workflow-has-images .pdf-workflow-table td {
+  height: 7mm;
+  padding: 1.05mm 2.1mm;
+  font-size: 6.5px;
+  line-height: 1.15;
 }
 
-.pdf-workflow-images-tight .pdf-workflow-images-title {
-  height: 5.8mm;
-  margin-bottom: 1.5mm;
+.pdf-secondary-page.pdf-workflow-images-dense .pdf-workflow-table td {
+  height: 6.1mm;
+  padding: .8mm 2mm;
+  font-size: 6px;
 }
 
-.pdf-workflow-images-tight .pdf-workflow-image-grid,
-.pdf-workflow-images-tight .pdf-workflow-images.count-1 .pdf-workflow-image-grid {
-  height: 36mm;
+.pdf-secondary-page.pdf-workflow-images-tight .pdf-workflow-section .pdf-section-title {
+  height: 6mm;
+  margin-bottom: 1mm;
+}
+
+.pdf-secondary-page.pdf-workflow-images-tight .pdf-workflow-table th {
+  height: 5.7mm;
+  padding: .8mm 2mm;
+  font-size: 6.5px;
+}
+
+.pdf-secondary-page.pdf-workflow-images-tight .pdf-workflow-table td {
+  height: 5.2mm;
+  padding: .55mm 1.8mm;
+  font-size: 5.5px;
+  line-height: 1.08;
+}
+
+.pdf-secondary-page.pdf-workflow-images-dense .pdf-workflow-images,
+.pdf-secondary-page.pdf-workflow-images-tight .pdf-workflow-images {
+  margin-top: 1.5mm;
+}
+
+.pdf-secondary-page.pdf-workflow-images-tight .pdf-workflow-images-title {
+  height: 5.2mm;
+  margin-bottom: 1mm;
 }
