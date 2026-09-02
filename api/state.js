@@ -138,6 +138,20 @@ function githubHeaders(token) {
   };
 }
 
+async function readBlobContent(token, sha) {
+  const url = `https://api.github.com/repos/${OWNER}/${REPO}/git/blobs/${encodeURIComponent(sha)}`;
+  const response = await fetch(url, { headers: githubHeaders(token), cache: "no-store" });
+  if (!response.ok) {
+    const text = await response.text();
+    const error = new Error(`github_blob_read_failed_${response.status}`);
+    error.status = response.status;
+    error.detail = text.slice(0, 400);
+    throw error;
+  }
+  const payload = await response.json();
+  return String(payload.content || "").replace(/\n/g, "");
+}
+
 async function readEnvelope(token) {
   const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${DATA_PATH}?ref=${encodeURIComponent(DATA_BRANCH)}`;
   const response = await fetch(url, { headers: githubHeaders(token), cache: "no-store" });
@@ -155,9 +169,13 @@ async function readEnvelope(token) {
     throw error;
   }
   const payload = await response.json();
-  const decoded = Buffer.from(String(payload.content || "").replace(/\n/g, ""), "base64").toString("utf8");
+  if (!payload.sha) throw new Error("github_state_sha_missing");
+  let encoded = String(payload.content || "").replace(/\n/g, "");
+  if (!encoded) encoded = await readBlobContent(token, payload.sha);
+  if (!encoded) throw new Error("github_state_content_missing");
+  const decoded = Buffer.from(encoded, "base64").toString("utf8");
   const envelope = JSON.parse(decoded);
-  return { sha: payload.sha || null, envelope };
+  return { sha: payload.sha, envelope };
 }
 
 async function writeEnvelope(token, sha, envelope) {
