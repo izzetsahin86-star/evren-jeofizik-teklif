@@ -1,0 +1,252 @@
+/* Evren Jeofizik - isolated animated mobile bottom navigation.
+   Desktop and core application styles are intentionally untouched. */
+
+.mobile-smart-nav {
+  display: none;
+}
+
+@media (max-width: 820px) {
+  .mobile-smart-nav.is-visible {
+    position: fixed;
+    z-index: 70;
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: max(10px, env(safe-area-inset-left));
+    height: 72px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: center;
+    padding: 7px 6px 6px;
+    border: 1px solid rgba(255,255,255,.72);
+    border-radius: 23px;
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 12px 38px rgba(28,28,30,.17), 0 2px 9px rgba(28,28,30,.08);
+    backdrop-filter: blur(22px) saturate(155%);
+    -webkit-backdrop-filter: blur(22px) saturate(155%);
+  }
+
+  .mobile-smart-item {
+    position: relative;
+    min-width: 0;
+    height: 58px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 0 2px;
+    border: 0;
+    border-radius: 15px;
+    background: transparent;
+    color: #777b82;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transition: transform .18s cubic-bezier(.2,.8,.2,1), background .18s ease, color .18s ease;
+  }
+
+  .mobile-smart-item:active {
+    transform: scale(.91);
+  }
+
+  .mobile-smart-icon {
+    width: 31px;
+    height: 31px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    transition: transform .2s cubic-bezier(.2,.8,.2,1), background .2s ease, box-shadow .2s ease;
+  }
+
+  .mobile-smart-icon svg,
+  .mobile-smart-create-icon svg {
+    width: 21px;
+    height: 21px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .mobile-smart-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 9.5px;
+    font-weight: 650;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color .18s ease, transform .18s ease;
+  }
+
+  .mobile-smart-item.active .mobile-smart-icon {
+    transform: translateY(-2px) scale(1.06);
+  }
+
+  .mobile-smart-item.active .mobile-smart-label {
+    transform: translateY(-1px);
+    color: #2d2d2c;
+  }
+
+  .mobile-smart-home.active .mobile-smart-icon {
+    color: #cf8100;
+    background: #fff1d1;
+    box-shadow: 0 5px 13px rgba(247,169,27,.18);
+  }
+
+  .mobile-smart-quotes.active .mobile-smart-icon {
+    color: #3276d8;
+    background: #eaf3ff;
+    box-shadow: 0 5px 13px rgba(67,133,233,.16);
+  }
+
+  .mobile-smart-customers.active .mobile-smart-icon {
+    color: #7d45c4;
+    background: #f2eaff;
+    box-shadow: 0 5px 13px rgba(146,83,223,.16);
+  }
+
+  .mobile-smart-menu.active .mobile-smart-icon {
+    color: #404347;
+    background: #eceeef;
+    box-shadow: 0 5px 13px rgba(44,47,51,.12);
+  }
+
+  .mobile-smart-create {
+    overflow: visible;
+    color: #fff;
+  }
+
+  .mobile-smart-create-icon {
+    position: relative;
+    z-index: 2;
+    width: 58px;
+    height: 58px;
+    display: grid;
+    place-items: center;
+    margin-top: -28px;
+    border: 4px solid rgba(255,255,255,.96);
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, #ff9f0a 0%, #f7a91b 48%, #ffc14b 100%);
+    box-shadow: 0 11px 24px rgba(239,156,10,.34), 0 3px 8px rgba(0,0,0,.10);
+    transition: transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease;
+  }
+
+  .mobile-smart-create-icon svg {
+    width: 25px;
+    height: 25px;
+    stroke-width: 2.15;
+  }
+
+  .mobile-smart-create .mobile-smart-label {
+    margin-top: 1px;
+    color: #8b5a0a;
+    font-weight: 750;
+  }
+
+  .mobile-smart-create-orbit {
+    position: absolute;
+    z-index: 1;
+    top: -20px;
+    left: 50%;
+    width: 52px;
+    height: 52px;
+    border: 1px solid rgba(247,169,27,.34);
+    border-radius: 50%;
+    opacity: .45;
+    transform: translateX(-50%);
+    animation: smart-nav-pulse 2.8s ease-out infinite;
+    pointer-events: none;
+  }
+
+  .mobile-smart-create:active {
+    transform: none;
+  }
+
+  .mobile-smart-create:active .mobile-smart-create-icon {
+    transform: scale(.88) rotate(-4deg);
+    box-shadow: 0 5px 12px rgba(239,156,10,.25);
+  }
+
+  .mobile-smart-create.active .mobile-smart-create-icon {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 14px 29px rgba(239,156,10,.42), 0 4px 10px rgba(0,0,0,.10);
+  }
+
+  .mobile-smart-create.active .mobile-smart-label {
+    color: #b46e00;
+  }
+
+  @keyframes smart-nav-pulse {
+    0% { opacity: .45; transform: translateX(-50%) scale(.92); }
+    72%, 100% { opacity: 0; transform: translateX(-50%) scale(1.48); }
+  }
+
+  .main {
+    padding-bottom: max(116px, calc(102px + env(safe-area-inset-bottom))) !important;
+  }
+
+  .modal-backdrop,
+  .pdf-preview-backdrop {
+    z-index: 90;
+  }
+}
+
+@media (max-width: 390px) {
+  .mobile-smart-nav.is-visible {
+    right: max(7px, env(safe-area-inset-right));
+    left: max(7px, env(safe-area-inset-left));
+    border-radius: 21px;
+  }
+
+  .mobile-smart-label {
+    font-size: 8.8px;
+  }
+
+  .mobile-smart-create-icon {
+    width: 55px;
+    height: 55px;
+  }
+}
+
+@media (max-width: 820px) and (orientation: landscape) and (max-height: 500px) {
+  .mobile-smart-nav.is-visible {
+    height: 62px;
+    bottom: max(5px, env(safe-area-inset-bottom));
+  }
+
+  .mobile-smart-item {
+    height: 50px;
+  }
+
+  .mobile-smart-create-icon {
+    width: 50px;
+    height: 50px;
+    margin-top: -21px;
+  }
+
+  .mobile-smart-create-orbit {
+    top: -15px;
+  }
+
+  .main {
+    padding-bottom: max(96px, calc(84px + env(safe-area-inset-bottom))) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-smart-item,
+  .mobile-smart-icon,
+  .mobile-smart-label,
+  .mobile-smart-create-icon {
+    transition: none !important;
+  }
+
+  .mobile-smart-create-orbit {
+    animation: none !important;
+    display: none;
+  }
+}
