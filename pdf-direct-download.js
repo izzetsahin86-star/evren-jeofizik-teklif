@@ -25,13 +25,13 @@
   }
 
   function safeFileName(value) {
-    const name = String(value || "Evren-Jeofizik-Teklif")
+    const name = String(value || "Evren Jeofizik Teklif")
       .trim()
       .replace(/[\\/:*?"<>|]+/g, "-")
-      .replace(/\s+/g, "-")
+      .replace(/\s+/g, " ")
       .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-    return `${name || "Evren-Jeofizik-Teklif"}.pdf`;
+      .replace(/^[ .-]+|[ .-]+$/g, "");
+    return `${name || "Evren Jeofizik Teklif"}.pdf`;
   }
 
   function setButtonText(button, text) {
@@ -143,14 +143,17 @@
         pdf.addImage(image, "JPEG", 0, 0, 210, 297, undefined, "FAST");
       }
 
-      const title = modal?.querySelector(".pdf-preview-toolbar h2")?.textContent?.trim() || "Evren Jeofizik Teklif";
+      const quoteTitle = modal?.querySelector(".pdf-preview-toolbar h2")?.textContent?.trim() || "Evren Jeofizik Teklif";
+      const customerName = sheet?.querySelector(".pdf-primary-page .pdf-customer-box > strong")?.textContent?.trim() || "";
+      const fileTitle = customerName && customerName !== "—" ? customerName : quoteTitle;
+
       pdf.setProperties({
-        title,
+        title: quoteTitle,
         subject: "Evren Jeofizik Teklif",
         creator: "Evren Jeofizik Teklif Sistemi"
       });
 
-      await exportPdfFile(pdf, title);
+      await exportPdfFile(pdf, fileTitle);
     } catch (error) {
       console.error("PDF dışa aktarılamadı:", error);
       window.alert(error?.message || "PDF dışa aktarılamadı. Lütfen sayfayı yenileyip tekrar deneyin.");
