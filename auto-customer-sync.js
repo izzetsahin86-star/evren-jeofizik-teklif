@@ -3,6 +3,7 @@
   const REFRESH_KEY = "evren-auto-customer-refresh";
   const nativeSetItem = Storage.prototype.setItem;
   const sessionCustomers = new Map();
+  const sessionQuoteLinks = new Map();
   let pendingCustomer = null;
 
   function normalizeName(value) {
@@ -15,6 +16,10 @@
 
   function clean(value) {
     return String(value || "").trim();
+  }
+
+  function quoteLinkKey(quoteNo, customerName) {
+    return `${clean(quoteNo)}|${normalizeName(customerName)}`;
   }
 
   function makeId() {
@@ -97,17 +102,28 @@
     });
   }
 
+  function mergeSessionQuoteLinks(state) {
+    if (!Array.isArray(state?.quotes)) return;
+    state.quotes.forEach((quote) => {
+      const customerId = sessionQuoteLinks.get(quoteLinkKey(quote?.no, quote?.customerName));
+      if (customerId) quote.customerId = customerId;
+    });
+  }
+
   Storage.prototype.setItem = function patchedSetItem(key, value) {
     if (this === localStorage && key === STORAGE_KEY) {
       try {
         const state = JSON.parse(String(value));
         mergeSessionCustomers(state);
+        mergeSessionQuoteLinks(state);
 
         if (pendingCustomer) {
-          const saved = mergeCustomer(state, pendingCustomer);
+          const candidate = pendingCustomer;
+          const saved = mergeCustomer(state, candidate);
           pendingCustomer = null;
           if (saved) {
             sessionCustomers.set(saved.id, saved);
+            sessionQuoteLinks.set(quoteLinkKey(candidate.quoteNo, candidate.name), saved.id);
             sessionStorage.setItem(REFRESH_KEY, "1");
           }
         }
