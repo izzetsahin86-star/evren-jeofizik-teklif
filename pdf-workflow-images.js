@@ -1,10 +1,40 @@
 (() => {
   const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+  const DRAFT_KEY = "evren-workflow-image-captions-draft";
   let queued = false;
 
   function imageSource(image) {
     if (typeof image === "string") return /^(data:|https?:|blob:)/.test(image) ? image : "";
     return image?.data || image?.src || "";
+  }
+
+  function sourceKey(source) {
+    const text = String(source || "");
+    if (!text) return "";
+    let hash = 2166136261;
+    const step = Math.max(1, Math.floor(text.length / 2048));
+    for (let i = 0; i < text.length; i += step) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return `${text.length}-${(hash >>> 0).toString(36)}`;
+  }
+
+  function readDraftCaptions() {
+    try {
+      return JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
   }
 
   function readStoredQuotes() {
@@ -35,15 +65,26 @@
   }
 
   function visibleDraftImages() {
+    const draft = readDraftCaptions();
     return [...document.querySelectorAll(".quote-image-grid img")]
-      .map((img) => img.currentSrc || img.src || "")
+      .map((img) => {
+        const src = img.currentSrc || img.src || "";
+        return src ? { src, caption: String(draft[sourceKey(src)] || "").trim() } : null;
+      })
       .filter(Boolean)
       .slice(0, 4);
   }
 
   function getImages(sheet) {
+    const draft = readDraftCaptions();
     const quote = quoteForSheet(sheet);
-    const stored = (quote?.images || []).map(imageSource).filter(Boolean).slice(0, 4);
+    const stored = (quote?.images || []).map((image) => {
+      const src = imageSource(image);
+      if (!src) return null;
+      const key = sourceKey(src);
+      const draftCaption = Object.prototype.hasOwnProperty.call(draft, key) ? draft[key] : undefined;
+      return { src, caption: String(draftCaption ?? image?.caption ?? "").trim() };
+    }).filter(Boolean).slice(0, 4);
     return stored.length ? stored : visibleDraftImages();
   }
 
@@ -98,7 +139,7 @@
     if (rowCount > 10) page.classList.add("pdf-workflow-images-tight");
     else if (rowCount > 7) page.classList.add("pdf-workflow-images-dense");
 
-    const signature = images.join("|");
+    const signature = images.map((item) => `${item.src}|${item.caption}`).join("||");
     let section = existing;
 
     if (!section || section.dataset.signature !== signature) {
@@ -109,7 +150,7 @@
       section.innerHTML = `
         <div class="pdf-workflow-images-title"><i></i><span>İŞ AKIŞI GÖRSELLERİ</span></div>
         <div class="pdf-workflow-image-grid">
-          ${images.map((src, index) => `<figure><img src="${src}" alt="İş akışı görseli ${index + 1}" /></figure>`).join("")}
+          ${images.map((item, index) => `<figure class="${item.caption ? "has-caption" : ""}">${item.caption ? `<figcaption>${escapeHtml(item.caption)}</figcaption>` : ""}<img src="${item.src}" alt="İş akışı görseli ${index + 1}" /></figure>`).join("")}
         </div>`;
       workflow.insertAdjacentElement("afterend", section);
     }
