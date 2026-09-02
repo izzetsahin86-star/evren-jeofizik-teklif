@@ -2,6 +2,65 @@
   const DENSITY_CLASSES = ["pdf-fit-dense", "pdf-fit-compact", "pdf-fit-tight", "pdf-fit-ultra", "pdf-desc-long", "pdf-desc-very-long"];
   let queued = false;
 
+  function currentCustomerDetails() {
+    const formValues = {
+      contact: document.querySelector('[data-model="contact"]')?.value?.trim() || "",
+      phone: document.querySelector('[data-model="phone"]')?.value?.trim() || "",
+      email: document.querySelector('[data-model="email"]')?.value?.trim() || ""
+    };
+    if (formValues.contact || formValues.phone || formValues.email) return formValues;
+
+    const customerCard = [...document.querySelectorAll(".quote-info-card")].find((card) =>
+      card.querySelector(".quote-card-kicker")?.textContent?.includes("MÜŞTERİ BİLGİLERİ")
+    );
+    if (!customerCard) return formValues;
+
+    const readDetail = (label) => {
+      const row = [...customerCard.querySelectorAll("dl > div")].find((item) => item.querySelector("dt")?.textContent?.trim() === label);
+      const value = row?.querySelector("dd")?.textContent?.trim() || "";
+      return value === "—" ? "" : value;
+    };
+
+    return {
+      contact: readDetail("Yetkili"),
+      phone: readDetail("Telefon"),
+      email: readDetail("E-posta")
+    };
+  }
+
+  function enrichCustomerDetails(sheet) {
+    const box = sheet.querySelector(".pdf-primary-page .pdf-customer-box");
+    if (!box) return;
+
+    const details = currentCustomerDetails();
+    const metaText = [details.contact && `Yetkili: ${details.contact}`, details.phone && `Telefon: ${details.phone}`].filter(Boolean).join("  •  ");
+    const emailText = details.email ? `E-posta: ${details.email}` : "";
+
+    let meta = box.querySelector(".pdf-customer-meta-added");
+    if (metaText) {
+      if (!meta) {
+        meta = document.createElement("p");
+        meta.className = "pdf-customer-meta-added";
+        box.appendChild(meta);
+      }
+      if (meta.textContent !== metaText) meta.textContent = metaText;
+    } else if (meta) {
+      meta.remove();
+    }
+
+    let email = box.querySelector(".pdf-customer-email-added");
+    if (emailText) {
+      if (!email) {
+        email = document.createElement("small");
+        email.className = "pdf-customer-email-added";
+        box.appendChild(email);
+      }
+      if (email.textContent !== emailText) email.textContent = emailText;
+    } else if (email) {
+      email.remove();
+    }
+  }
+
   function classifyPrimary(primary) {
     const body = primary.querySelector(".pdf-items-table tbody");
     if (!body) return;
@@ -21,6 +80,9 @@
   function normalizeSheet(sheet) {
     const primary = sheet.querySelector(".pdf-primary-page");
     if (!primary) return;
+
+    enrichCustomerDetails(sheet);
+
     const itemSection = primary.querySelector(".pdf-items-section");
     const primaryBody = primary.querySelector(".pdf-items-table tbody");
     if (!itemSection || !primaryBody) return;
