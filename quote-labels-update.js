@@ -1,30 +1,59 @@
 (() => {
-  function replaceText(root = document) {
-    document.querySelectorAll(".pdf-items-table thead th:nth-child(2)").forEach((th) => {
-      th.textContent = "HİZMET / ÜRÜN";
+  let scheduled = false;
+
+  function applyLabels() {
+    scheduled = false;
+
+    document.querySelectorAll(".form-section-title").forEach((el) => {
+      if (el.textContent.trim() === "Açıklama") el.textContent = "TEKLİF NOTLARI";
     });
 
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
+    document.querySelectorAll(".quote-content-card .quote-section-head.compact p").forEach((el) => {
+      if (el.textContent.trim() === "AÇIKLAMA") el.textContent = "TEKLİF NOTLARI";
+    });
 
-    nodes.forEach((node) => {
-      const parent = node.parentElement;
-      if (!parent || ["SCRIPT", "STYLE", "TEXTAREA", "INPUT"].includes(parent.tagName)) return;
-      if (parent.matches?.(".pdf-items-table thead th:nth-child(2)")) return;
+    document.querySelectorAll(".quote-content-card .quote-section-head.compact h2").forEach((el) => {
+      if (el.textContent.trim() === "Teklif Açıklaması") el.textContent = "Teklif Notları";
+    });
 
-      const text = node.nodeValue;
-      if (!text) return;
+    document.querySelectorAll(".pdf-note-section .pdf-section-title h2").forEach((el) => {
+      el.textContent = "TEKLİF NOTLARI";
+    });
 
-      if (text.trim() === "AÇIKLAMA") node.nodeValue = text.replace("AÇIKLAMA", "TEKLİF NOTLARI");
-      else if (text.trim() === "Açıklama") node.nodeValue = text.replace("Açıklama", "TEKLİF NOTLARI");
-      else if (text.trim() === "Teklif Açıklaması") node.nodeValue = text.replace("Teklif Açıklaması", "Teklif Notları");
-      else if (text.includes("PDF'de AÇIKLAMA başlığı altında görünür.")) {
-        node.nodeValue = text.replace("PDF'de AÇIKLAMA başlığı altında görünür.", "PDF'de TEKLİF NOTLARI başlığı altında görünür.");
+    document.querySelectorAll(".pdf-items-table thead th:nth-child(2)").forEach((el) => {
+      el.textContent = "HİZMET / ÜRÜN";
+    });
+
+    document.querySelectorAll(".form-section .muted").forEach((el) => {
+      if (el.textContent.includes("PDF'de AÇIKLAMA başlığı altında görünür.")) {
+        el.textContent = el.textContent.replace(
+          "PDF'de AÇIKLAMA başlığı altında görünür.",
+          "PDF'de TEKLİF NOTLARI başlığı altında görünür."
+        );
       }
     });
   }
 
-  replaceText();
-  new MutationObserver(() => replaceText()).observe(document.documentElement, { childList: true, subtree: true });
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => requestAnimationFrame(applyLabels));
+  }
+
+  document.addEventListener("click", schedule, true);
+  window.addEventListener("popstate", schedule);
+  window.addEventListener("load", schedule, { once: true });
+
+  const originalPushState = history.pushState.bind(history);
+  history.pushState = (...args) => {
+    const result = originalPushState(...args);
+    schedule();
+    return result;
+  };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", schedule, { once: true });
+  } else {
+    schedule();
+  }
 })();
