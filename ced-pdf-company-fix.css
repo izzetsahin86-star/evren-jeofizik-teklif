@@ -1,0 +1,28 @@
+.ced-pdf-brand > div::after {
+  content: "Dumlupınar Mah. Kocatepe Merkez Mah. No:2 Ordu Blv. No:4 İç Kapı No:309 Merkez/AFYONKARAHİSAR\A Tel: 0 532 792 79 10  |  E-posta: jeofizikhizmetleri@gmail.com";
+  display: block;
+  margin-top: 1.5mm;
+  white-space: pre-line;
+  font-size: 5.8pt;
+  line-height: 1.45;
+  color: #6f7471;
+  max-width: 92mm;
+}
+
+.ced-pdf-footer {
+  justify-content: flex-start;
+}
+
+.ced-pdf-footer-left {
+  display: block;
+}
+
+.ced-pdf-footer-left img,
+.ced-pdf-footer-left span,
+.ced-pdf-footer-right {
+  display: none !important;
+}
+
+.ced-pdf-footer-left strong {
+  font-size: 6.4pt;
+}
