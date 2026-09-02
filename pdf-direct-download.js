@@ -59,37 +59,42 @@
     return typeof window.html2canvas === "function" && Boolean(window.jspdf?.jsPDF);
   }
 
+  function isIOSDevice() {
+    return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+      || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  }
+
+  function directDownload(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.rel = "noopener";
+    anchor.style.display = "none";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
   async function exportPdfFile(pdf, title) {
     const fileName = safeFileName(title);
     const blob = pdf.output("blob");
     const file = new File([blob], fileName, { type: "application/pdf", lastModified: Date.now() });
 
-    // iPhone/iPad: share ONLY the actual PDF file. No URL, title or text is sent.
-    // This makes iOS show the real PDF attachment and “Dosyalara Kaydet”.
-    if (navigator.share && navigator.canShare?.({ files: [file] })) {
+    // iPhone/iPad keeps the native share flow so “Dosyalara Kaydet” remains available.
+    if (isIOSDevice() && navigator.share && navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ files: [file] });
         return;
       } catch (error) {
         if (error?.name === "AbortError") return;
-        console.warn("PDF dosya paylaşımı başarısız, PDF görüntüleyici açılıyor.", error);
+        console.warn("PDF dosya paylaşımı başarısız, doğrudan indirme deneniyor.", error);
       }
     }
 
-    // Safe fallback: open the generated PDF itself, never the quote webpage.
-    // From the PDF viewer the user can use Share > Dosyalara Kaydet.
-    const url = URL.createObjectURL(blob);
-    const opened = window.open(url, "_blank", "noopener,noreferrer");
-    if (!opened) {
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = fileName;
-      anchor.rel = "noopener";
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-    }
-    setTimeout(() => URL.revokeObjectURL(url), 120000);
+    // Desktop: always download the generated PDF directly.
+    directDownload(blob, fileName);
   }
 
   async function createPdf(button) {
