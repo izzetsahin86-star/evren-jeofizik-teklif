@@ -1,5 +1,7 @@
 (() => {
   const STORAGE_KEY = "evren-jeofizik-teklif-v1";
+  const REPAIR_KEY = "evren-device-state-repair-v1";
+  const CLOUD_REVISION_KEY = "evren-cloud-sync-revision";
   const TARGET_QUOTE_NO = "EJ-2026-0029";
   const TARGET_CUSTOMER = "KONYA KROM MAĞNEZİT TUĞLA SAN.A.Ş.";
 
@@ -41,6 +43,12 @@
 
   function repairState() {
     try {
+      // This was a one-time repair for the old PC-only localStorage mismatch.
+      // Once central sync has a revision, or this device has already been repaired,
+      // it must never overwrite legitimate future edits coming from the shared state.
+      if (Number(sessionStorage.getItem(CLOUD_REVISION_KEY) || 0) > 0) return;
+      if (localStorage.getItem(REPAIR_KEY) === "1") return;
+
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
 
@@ -139,6 +147,7 @@
       }
 
       if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(REPAIR_KEY, "1");
     } catch (error) {
       console.warn("Cihaz verisi düzeltilemedi.", error);
     }
