@@ -1,0 +1,9 @@
+.pdf-brand img {
+  object-fit: contain !important;
+  object-position: center center;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
