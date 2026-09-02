@@ -10,19 +10,5 @@
 }
 
 .ced-pdf-footer {
-  justify-content: flex-start;
-}
-
-.ced-pdf-footer-left {
-  display: block;
-}
-
-.ced-pdf-footer-left img,
-.ced-pdf-footer-left span,
-.ced-pdf-footer-right {
   display: none !important;
-}
-
-.ced-pdf-footer-left strong {
-  font-size: 6.4pt;
 }
