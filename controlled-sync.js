@@ -10,6 +10,9 @@
   let busy = false;
   let hourlyTimer = 0;
   let hourlyKickoff = 0;
+  let panelEl = null;
+  let statusText = "Hazır";
+  let statusTone = "idle";
 
   function readState() {
     try {
@@ -80,55 +83,87 @@
     return { response, payload };
   }
 
-  function ensurePanel() {
-    let panel = document.getElementById("controlled-sync");
-    if (panel) return panel;
-    panel = document.createElement("div");
-    panel.id = "controlled-sync";
-    panel.className = "controlled-sync";
-    panel.innerHTML = `
-      <button type="button" class="controlled-sync-btn" data-controlled-sync>
-        <span class="controlled-sync-icon" aria-hidden="true">↻</span>
-        <span>Senkronize Et</span>
-      </button>
-      <div class="controlled-sync-meta">
-        <span class="controlled-sync-status" data-sync-status>Hazır</span>
-        <span class="controlled-sync-last" data-sync-last>Son: —</span>
+  function createPanel() {
+    if (panelEl) return panelEl;
+    panelEl = document.createElement("section");
+    panelEl.id = "controlled-sync";
+    panelEl.className = "controlled-sync card";
+    panelEl.innerHTML = `
+      <div class="controlled-sync-copy">
+        <div class="controlled-sync-title">Cihaz Senkronizasyonu</div>
+        <div class="controlled-sync-description">PC ve mobil kayıtlarını kontrollü olarak eşitleyin. Saatlik kontrol arka planda sessiz çalışır.</div>
+      </div>
+      <div class="controlled-sync-actions">
+        <button type="button" class="controlled-sync-btn" data-controlled-sync>
+          <span class="controlled-sync-icon" aria-hidden="true">↻</span>
+          <span>Senkronize Et</span>
+        </button>
+        <div class="controlled-sync-meta">
+          <span class="controlled-sync-status" data-sync-status>Hazır</span>
+          <span class="controlled-sync-last" data-sync-last>Son senkron: —</span>
+        </div>
       </div>`;
-    document.body.appendChild(panel);
-    panel.querySelector("[data-controlled-sync]")?.addEventListener("click", () => {
+    panelEl.querySelector("[data-controlled-sync]")?.addEventListener("click", () => {
       fullSync({ reason: "manual", allowReload: true }).catch(() => {});
     });
-    updateVisibility();
+    refreshPanel();
+    return panelEl;
+  }
+
+  function settingsContainer() {
+    const path = location.pathname.replace(/\/$/, "") || "/";
+    if (path !== "/settings") return null;
+    return document.querySelector("main.main .content, .main .content");
+  }
+
+  function mountPanel() {
+    const panel = createPanel();
+    const container = settingsContainer();
+    const authenticated = sessionStorage.getItem(AUTH_KEY) === "1";
+
+    if (!authenticated || !container) {
+      if (panel.isConnected) panel.remove();
+      return;
+    }
+
+    if (panel.parentElement !== container) container.appendChild(panel);
+    refreshPanel();
+  }
+
+  function refreshPanel() {
+    if (!panelEl) return;
+    const status = panelEl.querySelector("[data-sync-status]");
+    const button = panelEl.querySelector("[data-controlled-sync]");
+    if (status) {
+      status.textContent = statusText;
+      status.dataset.tone = statusTone;
+    }
+    if (button) button.disabled = busy;
     updateLastLabel();
-    return panel;
   }
 
   function updateVisibility() {
-    const panel = document.getElementById("controlled-sync");
-    if (panel) panel.hidden = sessionStorage.getItem(AUTH_KEY) !== "1";
+    mountPanel();
   }
 
   function setStatus(text, tone = "idle") {
-    const panel = ensurePanel();
-    const status = panel.querySelector("[data-sync-status]");
-    const button = panel.querySelector("[data-controlled-sync]");
-    if (status) {
-      status.textContent = text;
-      status.dataset.tone = tone;
-    }
-    if (button) button.disabled = busy;
+    statusText = text || "Hazır";
+    statusTone = tone;
+    refreshPanel();
   }
 
   function updateLastLabel() {
-    const el = document.querySelector("[data-sync-last]");
+    const el = panelEl?.querySelector("[data-sync-last]");
     if (!el) return;
     const raw = localStorage.getItem(LAST_SYNC_KEY);
-    if (!raw) { el.textContent = "Son: —"; return; }
+    if (!raw) {
+      el.textContent = "Son senkron: —";
+      return;
+    }
     const date = new Date(raw);
     el.textContent = Number.isNaN(date.getTime())
-      ? "Son: —"
-      : `Son: ${date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`;
+      ? "Son senkron: —"
+      : `Son senkron: ${date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`;
   }
 
   function markSynced(state, revision) {
@@ -173,8 +208,6 @@
 
       const base = baselineMap?.[key];
       if (!base) {
-        // İlk kontrollü senkronda aynı ID farklıysa merkezi sürüm güvenli başlangıçtır.
-        // Bu cihazdaki sadece yerel olan kayıtlar yukarıdaki birleşimle ayrıca korunur.
         merged.push(r);
         return;
       }
@@ -188,8 +221,6 @@
       const rTime = Date.parse(r?.updatedAt || r?.modifiedAt || "") || 0;
       if (lTime || rTime) merged.push(lTime >= rTime ? l : r);
       else {
-        // İki cihaz aynı kaydı değiştirdiyse körlemesine silme yapma;
-        // kullanıcının şu an kullandığı cihazdaki sürümü koru ve uyarı ver.
         merged.push(l);
         conflicts += 1;
       }
@@ -279,8 +310,6 @@
       else setStatus("Senkron tamamlandı", "success");
 
       if (allowReload && changedOnDevice) {
-        // Sadece girişte veya kullanıcının Senkronize Et butonuna basmasında tek seferlik yenileme.
-        // Saatlik kontrol hiçbir zaman location.reload çağırmaz.
         setTimeout(() => location.reload(), 450);
       }
     } catch (error) {
@@ -288,8 +317,7 @@
       setStatus("Senkron bağlantı hatası", "error");
     } finally {
       busy = false;
-      const button = document.querySelector("[data-controlled-sync]");
-      if (button) button.disabled = false;
+      refreshPanel();
     }
   }
 
@@ -312,8 +340,6 @@
       }
 
       if (remoteRevision > knownRevision) {
-        // Başka cihazda değişiklik varsa otomatik olarak ekrana dokunma/yükleme yapma.
-        // Kullanıcı tek bir manuel senkronla güvenli birleşimi başlatır.
         setStatus("Yeni kayıt var · Senkronize Et", "warn");
         return;
       }
@@ -326,7 +352,6 @@
         return;
       }
 
-      // Merkez değişmemişse bu cihazdaki kaydı güvenle gönder.
       const save = await putState(local, remoteRevision);
       if (save.response.ok && save.payload?.ok) {
         markSynced(local, save.payload.revision);
@@ -350,7 +375,10 @@
 
   document.addEventListener("submit", (event) => {
     const form = event.target;
-    if (form?.id !== "login-form") return;
+    if (form?.id !== "login-form") {
+      setTimeout(mountPanel, 0);
+      return;
+    }
     const password = form.querySelector('[name="password"], #login-password')?.value || "";
     if (!password) return;
 
@@ -368,15 +396,24 @@
   }, true);
 
   document.addEventListener("click", (event) => {
-    if (!event.target.closest?.('[data-action="logout"]')) return;
-    fetch(API_SESSION, { method: "DELETE", credentials: "same-origin", keepalive: true }).catch(() => {});
-    setTimeout(updateVisibility, 50);
+    if (event.target.closest?.('[data-action="logout"]')) {
+      fetch(API_SESSION, { method: "DELETE", credentials: "same-origin", keepalive: true }).catch(() => {});
+      setTimeout(mountPanel, 50);
+      return;
+    }
+    setTimeout(mountPanel, 0);
+    setTimeout(mountPanel, 80);
   }, true);
 
-  ensurePanel();
-  updateVisibility();
+  document.addEventListener("change", () => {
+    if (location.pathname.replace(/\/$/, "") === "/settings") setTimeout(mountPanel, 0);
+  }, true);
 
-  // İlk otomatik kontrol bir sonraki saat başında, sonra her saat bir kez çalışır.
+  window.addEventListener("popstate", () => setTimeout(mountPanel, 0));
+
+  document.addEventListener("DOMContentLoaded", () => setTimeout(mountPanel, 0), { once: true });
+  setTimeout(mountPanel, 500);
+
   const untilNextHour = HOUR - (Date.now() % HOUR);
   hourlyKickoff = window.setTimeout(() => {
     hourlySync().catch(() => {});
