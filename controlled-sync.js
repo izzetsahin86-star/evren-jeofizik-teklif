@@ -3,9 +3,11 @@
   const AUTH_KEY = "evren-jeofizik-auth";
   const META_KEY = "evren-controlled-sync-meta-v2";
   const LAST_SYNC_KEY = "evren-controlled-sync-last-v2";
+  const DELETED_KEY = "evren-controlled-sync-deleted-v1";
   const API_STATE = "/api/state";
   const API_SESSION = "/api/session";
   const HOUR = 60 * 60 * 1000;
+  const COLLECTIONS = ["quotes", "customers", "companies", "services"];
 
   let busy = false;
   let hourlyTimer = 0;
@@ -36,6 +38,54 @@
     try { localStorage.setItem(META_KEY, JSON.stringify(meta)); } catch {}
   }
 
+  function emptyDeleted() {
+    return { quotes: {}, customers: {}, companies: {}, services: {} };
+  }
+
+  function normalizeDeleted(value) {
+    const result = emptyDeleted();
+    for (const collection of COLLECTIONS) {
+      const source = value?.[collection];
+      if (!source || typeof source !== "object" || Array.isArray(source)) continue;
+      for (const [id, at] of Object.entries(source)) {
+        if (!id) continue;
+        result[collection][id] = String(at || new Date().toISOString());
+      }
+    }
+    return result;
+  }
+
+  function readDeleted() {
+    try { return normalizeDeleted(JSON.parse(localStorage.getItem(DELETED_KEY) || "{}")); }
+    catch { return emptyDeleted(); }
+  }
+
+  function writeDeleted(deleted) {
+    try { localStorage.setItem(DELETED_KEY, JSON.stringify(normalizeDeleted(deleted))); } catch {}
+  }
+
+  function recordDeleted(collection, id) {
+    if (!COLLECTIONS.includes(collection) || !id) return;
+    const deleted = readDeleted();
+    deleted[collection][String(id)] = new Date().toISOString();
+    writeDeleted(deleted);
+  }
+
+  function mergeDeleted(...sources) {
+    const result = emptyDeleted();
+    for (const source of sources) {
+      const normalized = normalizeDeleted(source);
+      for (const collection of COLLECTIONS) {
+        for (const [id, at] of Object.entries(normalized[collection])) {
+          if (!result[collection][id] || String(at) > String(result[collection][id])) {
+            result[collection][id] = at;
+          }
+        }
+      }
+    }
+    return result;
+  }
+
   function stable(value) {
     try { return JSON.stringify(value); } catch { return ""; }
   }
@@ -54,7 +104,7 @@
 
   function baselineFor(state) {
     const result = { settings: hashValue(state?.settings || {}) };
-    for (const key of ["quotes", "customers", "companies", "services"]) {
+    for (const key of COLLECTIONS) {
       result[key] = {};
       (Array.isArray(state?.[key]) ? state[key] : []).forEach((item, index) => {
         result[key][itemKey(item, index)] = hashValue(item);
@@ -187,26 +237,39 @@
     return { value: local, conflict: 1 };
   }
 
-  function mergeObjectArray(localItems, remoteItems, baselineMap = {}) {
+  function mergeObjectArray(collection, localItems, remoteItems, baselineMap = {}, deletedMap = {}) {
     const local = Array.isArray(localItems) ? localItems : [];
     const remote = Array.isArray(remoteItems) ? remoteItems : [];
     const localMap = new Map(local.map((item, index) => [itemKey(item, index), item]));
     const remoteMap = new Map(remote.map((item, index) => [itemKey(item, index), item]));
     const keys = new Set([...remoteMap.keys(), ...localMap.keys()]);
     const merged = [];
+    const inferredDeleted = [];
     let conflicts = 0;
 
     keys.forEach((key) => {
       const l = localMap.get(key);
       const r = remoteMap.get(key);
-      if (!l) { merged.push(r); return; }
-      if (!r) { merged.push(l); return; }
+      const base = baselineMap?.[key];
+
+      if (deletedMap?.[key]) return;
+
+      if (!l) {
+        if (base) inferredDeleted.push(key);
+        else if (r) merged.push(r);
+        return;
+      }
+
+      if (!r) {
+        if (base) inferredDeleted.push(key);
+        else merged.push(l);
+        return;
+      }
 
       const lh = hashValue(l);
       const rh = hashValue(r);
       if (lh === rh) { merged.push(l); return; }
 
-      const base = baselineMap?.[key];
       if (!base) {
         merged.push(r);
         return;
@@ -226,7 +289,7 @@
       }
     });
 
-    return { items: merged, conflicts };
+    return { items: merged, conflicts, inferredDeleted, collection };
   }
 
   function mergeStates(localState, remoteState, baseline = {}) {
@@ -236,12 +299,25 @@
     const settings = mergeSettings(local.settings, remote.settings, baseline.settings);
     conflicts += settings.conflict;
 
+    const deleted = mergeDeleted(
+      remote.__syncDeleted,
+      local.__syncDeleted,
+      readDeleted()
+    );
+
     const result = { ...remote, ...local, settings: settings.value };
-    for (const key of ["quotes", "customers", "companies", "services"]) {
-      const part = mergeObjectArray(local[key], remote[key], baseline?.[key]);
-      result[key] = part.items;
+
+    for (const key of COLLECTIONS) {
+      const part = mergeObjectArray(key, local[key], remote[key], baseline?.[key], deleted[key]);
+      for (const id of part.inferredDeleted) {
+        if (!deleted[key][id]) deleted[key][id] = new Date().toISOString();
+      }
+      result[key] = part.items.filter((item, index) => !deleted[key][itemKey(item, index)]);
       conflicts += part.conflicts;
     }
+
+    result.__syncDeleted = deleted;
+    writeDeleted(deleted);
     return { state: result, conflicts };
   }
 
@@ -329,7 +405,7 @@
 
     try {
       const current = await request(API_STATE, { method: "GET" });
-      if (!current.response.ok || !current.payload?.ok || !current.payload?.initialized) return;
+      if (!current.response.ok || !current.payload?.ok || !current.payload?.initialized || !current.payload?.state) return;
 
       const remoteRevision = Number(current.payload.revision || 0);
       const knownRevision = Number(meta.revision || 0);
@@ -352,9 +428,11 @@
         return;
       }
 
-      const save = await putState(local, remoteRevision);
+      const merged = mergeStates(local, current.payload.state, meta.baseline || {});
+      const save = await putState(merged.state, remoteRevision);
       if (save.response.ok && save.payload?.ok) {
-        markSynced(local, save.payload.revision);
+        writeState(merged.state);
+        markSynced(merged.state, save.payload.revision);
         setStatus("Saatlik senkron tamam", "success");
       } else if (save.response.status === 409) {
         setStatus("Yeni kayıt var · Senkronize Et", "warn");
@@ -396,11 +474,33 @@
   }, true);
 
   document.addEventListener("click", (event) => {
-    if (event.target.closest?.('[data-action="logout"]')) {
+    const actionControl = event.target.closest?.("[data-action]");
+    const action = actionControl?.dataset?.action || "";
+
+    const deleteCollections = {
+      "delete-quote": "quotes",
+      "delete-customer": "customers",
+      "delete-service": "services",
+      "delete-company": "companies"
+    };
+    const collection = deleteCollections[action];
+    const deletingId = actionControl?.dataset?.id;
+
+    if (collection && deletingId) {
+      setTimeout(() => {
+        const state = readState();
+        const stillExists = Array.isArray(state?.[collection])
+          && state[collection].some((item) => String(item?.id) === String(deletingId));
+        if (!stillExists) recordDeleted(collection, deletingId);
+      }, 0);
+    }
+
+    if (action === "logout") {
       fetch(API_SESSION, { method: "DELETE", credentials: "same-origin", keepalive: true }).catch(() => {});
       setTimeout(mountPanel, 50);
       return;
     }
+
     setTimeout(mountPanel, 0);
     setTimeout(mountPanel, 80);
   }, true);
